@@ -46,7 +46,7 @@ struct Args {
     #[arg(long)]
     obfuscate_passwords: bool,
 
-    /// Change spaces to the specified character(s)
+    /// Change spaces in the output file names to the specified character(s)
     #[arg(long, allow_hyphen_values = true)]
     change_spaces: Option<String>,
 }
