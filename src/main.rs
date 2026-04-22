@@ -45,6 +45,10 @@ struct Args {
     /// Replace password values in sanitized output with bullet placeholders (••••••••)
     #[arg(long)]
     obfuscate_passwords: bool,
+
+    /// Change spaces to the specified character(s)
+    #[arg(long, allow_hyphen_values = true)]
+    change_spaces: Option<String>,
 }
 
 #[derive(Debug, Default)]
@@ -65,6 +69,7 @@ fn main() -> Result<()> {
         lossless: args.lossless,
         output_tree: args.output_tree,
         obfuscate_passwords: args.obfuscate_passwords,
+        change_spaces: args.change_spaces,
     };
 
     valid_dir_or_throw(&in_dir)?;
