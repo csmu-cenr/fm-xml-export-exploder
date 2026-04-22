@@ -260,11 +260,11 @@ fn process_catalog_elements<R: Read + BufRead>(
         }
         CatalogType::CalcsForCustomFunctions => {
             let dir = build_out_dir_path(context, Some(Qualifier::SanitizedCustomFunctions))?;
-            create_sanitized_custom_functions(&xml_out_dir_path, &dir);
+            create_sanitized_custom_functions(&xml_out_dir_path, &dir, context.flags);
         }
         CatalogType::CustomFunctions if ver >= VERSION_2_2_3_4 => {
             let dir = build_out_dir_path(context, Some(Qualifier::SanitizedCustomFunctions))?;
-            create_sanitized_custom_functions(&xml_out_dir_path, &dir);
+            create_sanitized_custom_functions(&xml_out_dir_path, &dir, context.flags);
         }
         _ => {}
     }

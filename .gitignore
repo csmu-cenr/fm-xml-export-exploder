@@ -22,3 +22,19 @@ Cargo.lock
 /.agents
 /.junie
 skills-lock.json
+
+# Visual Studio Code
+FM XML Exploder.code-workspace
+
+# priset
+helper.priset
+
+# macOS finder
+.DS_Store
+
+# Visual Studio Code
+.vscode*
+
+.gitignore-csmu
+.gitignore
+
