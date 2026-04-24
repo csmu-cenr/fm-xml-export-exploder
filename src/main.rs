@@ -49,6 +49,10 @@ struct Args {
     /// Change spaces in the output file names to the specified character(s)
     #[arg(long, allow_hyphen_values = true)]
     change_spaces: Option<String>,
+
+    /// Remove DDRREFS
+    #[arg(long)]
+    remove_ddrrefs: bool,
 }
 
 #[derive(Debug, Default)]
@@ -70,6 +74,7 @@ fn main() -> Result<()> {
         output_tree: args.output_tree,
         obfuscate_passwords: args.obfuscate_passwords,
         change_filename_spaces: args.change_spaces,
+        remove_dddrefs: args.remove_ddrrefs,
     };
 
     valid_dir_or_throw(&in_dir)?;
