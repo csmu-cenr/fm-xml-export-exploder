@@ -69,7 +69,7 @@ fn main() -> Result<()> {
         lossless: args.lossless,
         output_tree: args.output_tree,
         obfuscate_passwords: args.obfuscate_passwords,
-        change_spaces: args.change_spaces,
+        change_filename_spaces: args.change_spaces,
     };
 
     valid_dir_or_throw(&in_dir)?;

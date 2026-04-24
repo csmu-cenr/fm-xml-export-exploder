@@ -232,5 +232,5 @@ pub struct Flags {
     pub lossless: bool,
     pub output_tree: OutputTree,
     pub obfuscate_passwords: bool,
-    pub change_spaces: Option<String>,
+    pub change_filename_spaces: Option<String>,
 }

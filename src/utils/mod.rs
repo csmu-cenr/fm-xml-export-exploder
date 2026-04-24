@@ -145,7 +145,7 @@ pub fn write_xml_file(
         file_content.push('\n');
     }
 
-    let effective_output_file_path: PathBuf = if let Some(ref space_char) = flags.change_spaces {
+    let effective_output_file_path: PathBuf = if let Some(ref space_char) = flags.change_filename_spaces {
         let mut new_path = output_file_path.to_path_buf();
 
         if let Some(file_name) = new_path.file_name().and_then(|f| f.to_str()) {
@@ -172,7 +172,7 @@ pub fn write_text_file(output_file_path: &Path, content: &str, flags: &Flags) {
         file_content.push('\n');
     }
 
-    let effective_output_file_path: PathBuf = if let Some(ref space_char) = flags.change_spaces {
+    let effective_output_file_path: PathBuf = if let Some(ref space_char) = flags.change_filename_spaces {
         let mut new_path = output_file_path.to_path_buf();
 
         if let Some(file_name) = new_path.file_name().and_then(|f| f.to_str()) {
