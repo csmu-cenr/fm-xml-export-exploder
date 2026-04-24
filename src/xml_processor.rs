@@ -96,6 +96,15 @@ pub fn explode_xml(fm_export_file_path: &Path, root_out_dir: &Path, flags: &Flag
             }
             Ok(Event::Eof) => break,
             Ok(Event::Start(start_tag)) => {
+                if context.flags.remove_dddrefs && start_tag.name().as_ref() == b"DDRREF" {
+                    context
+                        .reader
+                        .read_to_end_into(start_tag.name(), &mut Vec::new())?;
+
+                    buf.clear();
+                    continue;
+                }
+
                 context.path_stack.push(start_tag.name().as_ref().to_vec());
                 push_start_to_skeleton(
                     &start_tag,

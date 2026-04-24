@@ -45,6 +45,11 @@ struct Args {
     /// Replace password values in sanitized output with bullet placeholders (••••••••)
     #[arg(long)]
     obfuscate_passwords: bool,
+
+    /// Remove DDRREFS
+    #[arg(long)]
+    remove_ddrrefs: bool,
+    
 }
 
 #[derive(Debug, Default)]
@@ -65,6 +70,7 @@ fn main() -> Result<()> {
         lossless: args.lossless,
         output_tree: args.output_tree,
         obfuscate_passwords: args.obfuscate_passwords,
+        remove_dddrefs: args.remove_ddrrefs,
     };
 
     valid_dir_or_throw(&in_dir)?;

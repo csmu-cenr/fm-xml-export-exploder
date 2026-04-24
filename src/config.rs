@@ -232,4 +232,5 @@ pub struct Flags {
     pub lossless: bool,
     pub output_tree: OutputTree,
     pub obfuscate_passwords: bool,
+    pub remove_dddrefs: bool,
 }
