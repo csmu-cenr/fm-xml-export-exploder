@@ -128,18 +128,6 @@ pub fn write_rest_of_element_to_file<R: Read + BufRead>(
     id_path: &str,
 ) -> PathBuf {
     let mut entity = Entity::default();
-    println!(
-        "\t\twrite_rest_of_element_to_file: START tag: {} attrs: {:?}",
-        String::from_utf8_lossy(start_tag.name().as_ref()),
-        start_tag
-            .attributes()
-            .flatten()
-            .map(|a| (
-                String::from_utf8_lossy(a.key.as_ref()).to_string(),
-                String::from_utf8_lossy(&a.value).to_string()
-            ))
-            .collect::<Vec<_>>()
-    );
     entity.read_xml_element(context, start_tag, id_path);
 
     if !entity.element_with_id.is_empty() {
