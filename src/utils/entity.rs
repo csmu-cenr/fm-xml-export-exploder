@@ -8,7 +8,7 @@ use crate::utils::attributes::get_attributes;
 use crate::utils::file_utils::{escape_filename, join_scope_id_and_name};
 use crate::utils::skeleton::push_line_to_skeleton;
 use crate::utils::xml_utils::{
-    XmlEventType, element_to_string, end_element_to_string, general_ref_to_string, is_ddrref,
+    XmlEventType, element_to_string, end_element_to_string, general_ref_to_string,
     local_name_to_string, start_element_to_string, text_element_to_string, unescape_xml_entities,
 };
 use crate::xml_processor::ProcessingContext;
@@ -43,19 +43,6 @@ impl Entity {
         start_tag: &BytesStart,
         id_path: &str,
     ) {
-        // // Skip DDRREF at entry point
-        // if context.flags.remove_ddrrefs && is_ddrref(start_tag) {
-        //     let mut skip_buf = Vec::new();
-
-        //     if let Err(e) = context
-        //         .reader
-        //         .read_to_end_into(start_tag.name(), &mut skip_buf)
-        //     {
-        //         eprintln!("Error skipping DDRREF: {e}");
-        //     }
-
-        //     return;
-        // }
 
         self.parse_xml_attributes(start_tag);
         self.tag_name = local_name_to_string(start_tag.name().as_ref());
@@ -80,19 +67,6 @@ impl Entity {
         loop {
             match context.reader.read_event_into(&mut buf) {
                 Ok(Event::Start(e)) => {
-                    // Skip nested DDRREF
-                    if context.flags.remove_ddrrefs && is_ddrref(&e) {
-                        let mut skip_buf = Vec::new();
-
-                        if let Err(err) = context.reader.read_to_end_into(e.name(), &mut skip_buf) {
-                            eprintln!("Error skipping DDRREF: {err}");
-                            break;
-                        }
-
-                        buf.clear();
-                        continue;
-                    }
-
                     self.read_xml_element(context, &e, id_path);
                 }
                 Ok(Event::Text(e)) => {

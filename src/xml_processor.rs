@@ -15,7 +15,7 @@ use crate::script_sanitizer::create_sanitized_scripts;
 use crate::supporting::process_supporting_element;
 use crate::utils::attributes::get_attribute;
 use crate::utils::xml_utils::{
-    XmlEventType, end_element_to_string, is_ddrref, start_element_to_string,
+    XmlEventType, end_element_to_string, start_element_to_string,
 };
 use crate::utils::{
     FolderStructure, VERSION_2_2_3_4, build_out_dir_path, create_dir, delete_output_directory,
@@ -295,9 +295,9 @@ fn push_start_to_skeleton(
         return;
     }
 
-    if flags.remove_ddrrefs && is_ddrref(e) {
-        return;
-    }
+    // if flags.remove_ddrrefs && is_ddrref(e) {
+    //     return;
+    // }
 
     // After pushing, path_stack.len() is depth+1 (1-indexed).
     // We want skeleton entries for depths 1-3 unconditionally,
