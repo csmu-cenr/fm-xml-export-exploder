@@ -162,6 +162,10 @@ pub fn push_rest_of_element_to_skeleton<R: Read + BufRead>(
             Err(_) => continue,
             Ok(Event::Eof) => break,
             Ok(Event::Start(e)) => {
+                if flags.remove_ddrrefs && is_ddrref(&e) {
+                    skip_rest_of_element(reader);
+                    continue;
+                }
                 push_line_to_skeleton(
                     skeleton,
                     base_depth,
@@ -248,6 +252,10 @@ pub fn element_to_string<R: Read + BufRead>(
             Err(_) => continue,
             Ok(Event::Eof) => break,
             Ok(Event::Start(e)) => {
+                if context.flags.remove_ddrrefs && is_ddrref(&e) {
+                    skip_rest_of_element(context.reader);
+                    continue;
+                }
                 depth += 1;
                 content.push_str(&start_element_to_string(&e, context.flags))
             }
