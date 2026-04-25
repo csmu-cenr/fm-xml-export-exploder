@@ -14,7 +14,9 @@ use crate::custom_function_sanitizer::create_sanitized_custom_functions;
 use crate::script_sanitizer::create_sanitized_scripts;
 use crate::supporting::process_supporting_element;
 use crate::utils::attributes::get_attribute;
-use crate::utils::xml_utils::{XmlEventType, end_element_to_string, start_element_to_string};
+use crate::utils::xml_utils::{
+    XmlEventType, end_element_to_string, is_ddrref, start_element_to_string,
+};
 use crate::utils::{
     FolderStructure, VERSION_2_2_3_4, build_out_dir_path, create_dir, delete_output_directory,
     push_line_to_skeleton, version_string_to_number, write_xml_file,
@@ -290,6 +292,10 @@ fn push_start_to_skeleton(
     flags: &Flags,
 ) {
     if !flags.lossless {
+        return;
+    }
+
+    if flags.remove_ddrrefs && is_ddrref(e) {
         return;
     }
 

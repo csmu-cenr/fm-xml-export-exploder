@@ -42,17 +42,19 @@ struct Args {
     #[arg(short = 't', long = "output_tree", value_enum, default_value_t = OutputTree::Db)]
     output_tree: OutputTree,
 
-    /// Replace password values in sanitized output with bullet placeholders (••••••••)
-    #[arg(long)]
-    obfuscate_passwords: bool,
-
     /// Change spaces in the output file names to the specified character(s)
     #[arg(long, allow_hyphen_values = true)]
     change_filename_spaces: Option<String>,
 
+    /// Replace password values in sanitized output with bullet placeholders (••••••••)
+    #[arg(long)]
+    obfuscate_passwords: bool,
+
     /// Remove DDRREFS
     #[arg(long)]
     remove_ddrrefs: bool,
+
+
 }
 
 #[derive(Debug, Default)]
