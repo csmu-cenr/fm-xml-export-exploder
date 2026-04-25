@@ -11,7 +11,7 @@ pub fn push_line_to_skeleton(
     is_child_start_tag: bool,
     current_event_type: XmlEventType,
 ) {
-    if str_to_push.is_empty() {
+    if str_to_push.trim().is_empty() {
         return;
     }
 
