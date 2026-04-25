@@ -74,7 +74,7 @@ fn main() -> Result<()> {
         output_tree: args.output_tree,
         obfuscate_passwords: args.obfuscate_passwords,
         change_filename_spaces: args.change_filename_spaces,
-        remove_dddrefs: args.remove_ddrrefs,
+        remove_ddrrefs: args.remove_ddrrefs,
     };
 
     valid_dir_or_throw(&in_dir)?;

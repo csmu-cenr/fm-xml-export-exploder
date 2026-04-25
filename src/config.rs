@@ -233,5 +233,5 @@ pub struct Flags {
     pub output_tree: OutputTree,
     pub obfuscate_passwords: bool,
     pub change_filename_spaces: Option<String>,
-    pub remove_dddrefs: bool,
+    pub remove_ddrrefs: bool,
 }

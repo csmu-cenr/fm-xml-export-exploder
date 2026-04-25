@@ -9,7 +9,7 @@ use crate::utils::file_utils::{escape_filename, join_scope_id_and_name};
 use crate::utils::skeleton::push_line_to_skeleton;
 use crate::utils::xml_utils::{
     XmlEventType, element_to_string, end_element_to_string, general_ref_to_string,
-    local_name_to_string, start_element_to_string, text_element_to_string, unescape_xml_entities,
+    is_ddrref, local_name_to_string, start_element_to_string, text_element_to_string, unescape_xml_entities,
 };
 use crate::xml_processor::ProcessingContext;
 
@@ -37,52 +37,84 @@ impl Entity {
             }
         }
     }
+pub fn read_xml_element<R: Read + BufRead>(
+    &mut self,
+    context: &mut ProcessingContext<'_, R>,
+    start_tag: &BytesStart,
+    id_path: &str,
+) {
+    // Skip DDRREF at entry point
+    if context.flags.remove_ddrrefs && is_ddrref(start_tag) {
+        let mut skip_buf = Vec::new();
 
-    pub fn read_xml_element<R: Read + BufRead>(
-        &mut self,
-        context: &mut ProcessingContext<'_, R>,
-        start_tag: &BytesStart,
-        id_path: &str,
-    ) {
-        self.parse_xml_attributes(start_tag);
-        self.tag_name = local_name_to_string(start_tag.name().as_ref());
-
-        if !self.id.is_empty() {
-            let element_string = element_to_string(context, start_tag);
-            self.content.push_str(&element_string);
-            if !id_path.is_empty() {
-                let parent_element = id_path.rsplit('/').nth(1).unwrap_or("unknown");
-                if parent_element == self.tag_name {
-                    self.element_with_id = element_string;
-                }
-            }
-            return;
+        if let Err(e) = context.reader.read_to_end_into(start_tag.name(), &mut skip_buf) {
+            eprintln!("Error skipping DDRREF: {e}");
         }
 
-        self.content
-            .push_str(&start_element_to_string(start_tag, context.flags));
-        let mut buf = Vec::new();
-        loop {
-            match context.reader.read_event_into(&mut buf) {
-                Ok(Event::Start(e)) => {
-                    self.read_xml_element(context, &e, id_path);
-                }
-                Ok(Event::Text(e)) => {
-                    self.content.push_str(&text_element_to_string(&e, false));
-                }
-                Ok(Event::GeneralRef(e)) => {
-                    self.content.push_str(&general_ref_to_string(&e, true));
-                }
-                Ok(Event::End(e)) => {
-                    self.content.push_str(&end_element_to_string(&e));
-                    break;
-                }
-                Ok(Event::Eof) => break,
-                _ => {}
-            }
-            buf.clear();
-        }
+        return;
     }
+
+    self.parse_xml_attributes(start_tag);
+    self.tag_name = local_name_to_string(start_tag.name().as_ref());
+
+    if !self.id.is_empty() {
+        let element_string = element_to_string(context, start_tag);
+        self.content.push_str(&element_string);
+
+        if !id_path.is_empty() {
+            let parent_element = id_path.rsplit('/').nth(1).unwrap_or("unknown");
+            if parent_element == self.tag_name {
+                self.element_with_id = element_string;
+            }
+        }
+
+        return;
+    }
+
+    self.content
+        .push_str(&start_element_to_string(start_tag, context.flags));
+
+    let mut buf = Vec::new();
+
+    loop {
+        match context.reader.read_event_into(&mut buf) {
+            Ok(Event::Start(e)) => {
+                // Skip nested DDRREF
+                if context.flags.remove_ddrrefs && is_ddrref(&e) {
+                    let mut skip_buf = Vec::new();
+
+                    if let Err(err) = context.reader.read_to_end_into(e.name(), &mut skip_buf) {
+                        eprintln!("Error skipping DDRREF: {err}");
+                        break;
+                    }
+
+                    buf.clear();
+                    continue;
+                }
+
+                self.read_xml_element(context, &e, id_path);
+            }
+            Ok(Event::Text(e)) => {
+                self.content.push_str(&text_element_to_string(&e, false));
+            }
+            Ok(Event::GeneralRef(e)) => {
+                self.content.push_str(&general_ref_to_string(&e, true));
+            }
+            Ok(Event::End(e)) => {
+                self.content.push_str(&end_element_to_string(&e));
+                break;
+            }
+            Ok(Event::Eof) => break,
+            Err(e) => {
+                eprintln!("Error reading XML element: {e}");
+                break;
+            }
+            _ => {}
+        }
+
+        buf.clear();
+    }
+}
 }
 
 pub fn write_rest_of_element_to_file<R: Read + BufRead>(

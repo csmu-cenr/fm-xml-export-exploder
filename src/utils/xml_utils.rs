@@ -81,6 +81,10 @@ pub fn cdata_to_string(e: &BytesCData) -> String {
     String::from_utf8_lossy(e).into_owned()
 }
 
+pub fn is_ddrref(start_tag: &quick_xml::events::BytesStart) -> bool {
+    start_tag.name().as_ref() == b"DDRREF"
+}
+
 /// Convert a general entity reference back to its escaped XML form
 /// e.g., BytesRef containing "quot" -> "&quot;", BytesRef containing "#09" -> "&#09;"
 pub fn general_ref_to_string(e: &BytesRef, escape: bool) -> String {
