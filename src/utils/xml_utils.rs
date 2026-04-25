@@ -81,6 +81,10 @@ pub fn cdata_to_string(e: &BytesCData) -> String {
     String::from_utf8_lossy(e).into_owned()
 }
 
+pub fn is_ddrref(start_tag: &quick_xml::events::BytesStart) -> bool {
+    start_tag.name().as_ref() == b"DDRREF"
+}
+
 /// Convert a general entity reference back to its escaped XML form
 /// e.g., BytesRef containing "quot" -> "&quot;", BytesRef containing "#09" -> "&#09;"
 pub fn general_ref_to_string(e: &BytesRef, escape: bool) -> String {
@@ -158,6 +162,10 @@ pub fn push_rest_of_element_to_skeleton<R: Read + BufRead>(
             Err(_) => continue,
             Ok(Event::Eof) => break,
             Ok(Event::Start(e)) => {
+                if flags.remove_ddrrefs && is_ddrref(&e) {
+                    skip_rest_of_element(reader);
+                    continue;
+                }
                 push_line_to_skeleton(
                     skeleton,
                     base_depth,
@@ -244,6 +252,10 @@ pub fn element_to_string<R: Read + BufRead>(
             Err(_) => continue,
             Ok(Event::Eof) => break,
             Ok(Event::Start(e)) => {
+                if context.flags.remove_ddrrefs && is_ddrref(&e) {
+                    skip_rest_of_element(context.reader);
+                    continue;
+                }
                 depth += 1;
                 content.push_str(&start_element_to_string(&e, context.flags))
             }

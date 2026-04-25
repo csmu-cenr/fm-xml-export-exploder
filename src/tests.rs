@@ -50,6 +50,8 @@ mod tests {
             lossless: is_lossless,
             output_tree,
             obfuscate_passwords: false,
+            change_filename_spaces: Some("--".to_string()),
+            remove_ddrrefs: false,
         };
         let _ = fs::remove_dir_all(output_dir);
 

@@ -137,24 +137,55 @@ pub fn write_xml_file(
         if filter_noisy_lines && should_skip_line(line) {
             continue;
         }
-        file_content.push_str(line.strip_prefix(&indent_prefix).unwrap_or(line));
+        let processed_line = line
+            .strip_prefix(&indent_prefix)
+            .unwrap_or(line)
+            .to_string();
+        file_content.push_str(&processed_line);
         file_content.push('\n');
     }
 
-    write_file(output_file_path, &file_content);
+    let effective_output_file_path: PathBuf = if let Some(ref space_char) = flags.change_filename_spaces {
+        let mut new_path = output_file_path.to_path_buf();
+
+        if let Some(file_name) = new_path.file_name().and_then(|f| f.to_str()) {
+            let new_name = file_name.replace(' ', space_char);
+            new_path.set_file_name(new_name);
+        }
+
+        new_path
+    } else {
+        output_file_path.to_path_buf()
+    };
+
+    write_file(&effective_output_file_path, &file_content);
 }
 
 static LINE_SPLIT_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\r\n|\n\r|\r|\n").unwrap());
 
-pub fn write_text_file(output_file_path: &Path, content: &str) {
+pub fn write_text_file(output_file_path: &Path, content: &str, flags: &Flags) {
     let mut file_content = String::with_capacity(content.len());
     for line in LINE_SPLIT_REGEX.split(content) {
-        file_content.push_str(line);
+        let processed_line = line.to_string();
+        file_content.push_str(&processed_line);
         file_content.push('\n');
     }
 
-    write_file(output_file_path, &file_content);
+    let effective_output_file_path: PathBuf = if let Some(ref space_char) = flags.change_filename_spaces {
+        let mut new_path = output_file_path.to_path_buf();
+
+        if let Some(file_name) = new_path.file_name().and_then(|f| f.to_str()) {
+            let new_name = file_name.replace(' ', space_char);
+            new_path.set_file_name(new_name);
+        }
+
+        new_path
+    } else {
+        output_file_path.to_path_buf()
+    };
+
+    write_file(&effective_output_file_path, &file_content);
 }
 
 fn write_file(output_file_path: &Path, file_content: &str) {

@@ -8,7 +8,7 @@ use quick_xml::events::{BytesStart, Event};
 use crate::utils::attributes::get_attributes;
 use crate::utils::file_utils::{escape_filename, join_scope_id_and_name};
 use crate::utils::xml_utils::{
-    XmlEventType, end_element_to_string, extract_values_from_xml_paths, format_end_tag,
+    XmlEventType, end_element_to_string, extract_values_from_xml_paths, format_end_tag, is_ddrref,
     push_rest_of_element_to_skeleton, skip_rest_of_element, start_element_to_string,
 };
 use crate::utils::{
@@ -61,6 +61,15 @@ pub fn xml_explode_catalog<R: Read + BufRead>(
             }
             Ok(Event::Eof) => break,
             Ok(Event::Start(e)) => {
+                if context.flags.remove_ddrrefs && is_ddrref(&e) {
+                    let mut skip_buf = Vec::new();
+
+                    context.reader.read_to_end_into(e.name(), &mut skip_buf)?;
+
+                    buf.clear();
+
+                    continue;
+                }
                 rel_depth += 1;
                 let start_tag = start_element_to_string(&e, context.flags);
 

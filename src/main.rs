@@ -42,9 +42,19 @@ struct Args {
     #[arg(short = 't', long = "output_tree", value_enum, default_value_t = OutputTree::Db)]
     output_tree: OutputTree,
 
+    /// Change spaces in the output file names to the specified character(s)
+    #[arg(long, allow_hyphen_values = true)]
+    change_filename_spaces: Option<String>,
+
     /// Replace password values in sanitized output with bullet placeholders (••••••••)
     #[arg(long)]
     obfuscate_passwords: bool,
+
+    /// Remove DDRREFS
+    #[arg(long)]
+    remove_ddrrefs: bool,
+
+
 }
 
 #[derive(Debug, Default)]
@@ -65,6 +75,8 @@ fn main() -> Result<()> {
         lossless: args.lossless,
         output_tree: args.output_tree,
         obfuscate_passwords: args.obfuscate_passwords,
+        change_filename_spaces: args.change_filename_spaces,
+        remove_ddrrefs: args.remove_ddrrefs,
     };
 
     valid_dir_or_throw(&in_dir)?;
