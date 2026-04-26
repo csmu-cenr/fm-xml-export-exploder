@@ -295,10 +295,6 @@ fn push_start_to_skeleton(
         return;
     }
 
-    // if flags.remove_ddrrefs && is_ddrref(e) {
-    //     return;
-    // }
-
     // After pushing, path_stack.len() is depth+1 (1-indexed).
     // We want skeleton entries for depths 1-3 unconditionally,
     // and depths 4-5 only under an AddAction/ModifyAction ancestor.

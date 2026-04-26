@@ -247,34 +247,75 @@ pub fn element_to_string<R: Read + BufRead>(
     let mut content = start_element_to_string(start_tag, context.flags);
     let mut depth = 1;
     let mut buf = Vec::new();
+    let mut pending_text = String::new();
     loop {
         match context.reader.read_event_into(&mut buf) {
             Err(_) => continue,
+
             Ok(Event::Eof) => break,
+
             Ok(Event::Start(e)) => {
                 if context.flags.remove_ddrrefs && is_ddrref(&e) {
+                    pending_text.clear(); // removes the tabs/newline before DDRREF
+
                     skip_rest_of_element(context.reader);
+
+                    buf.clear();
+
                     continue;
                 }
+
+                if !pending_text.is_empty() {
+                    content.push_str(&pending_text);
+
+                    pending_text.clear();
+                }
+
                 depth += 1;
-                content.push_str(&start_element_to_string(&e, context.flags))
+
+                content.push_str(&start_element_to_string(&e, context.flags));
             }
+
+            Ok(Event::Text(e)) | Ok(Event::Comment(e)) => {
+                pending_text.push_str(&text_element_to_string(&e, true));
+            }
+
             Ok(Event::CData(e)) => {
+                if !pending_text.is_empty() {
+                    content.push_str(&pending_text);
+
+                    pending_text.clear();
+                }
+
                 content.push_str(&cdata_element_to_string(&e));
             }
-            Ok(Event::Text(e)) | Ok(Event::Comment(e)) => {
-                content.push_str(&text_element_to_string(&e, true));
-            }
+
             Ok(Event::GeneralRef(e)) => {
+                if !pending_text.is_empty() {
+                    content.push_str(&pending_text);
+
+                    pending_text.clear();
+                }
+
                 content.push_str(&general_ref_to_string(&e, true));
             }
+
             Ok(Event::End(e)) => {
+                if !pending_text.is_empty() {
+                    content.push_str(&pending_text);
+
+                    pending_text.clear();
+                }
+
                 content.push_str(&end_element_to_string(&e));
+
                 depth -= 1;
+
                 if depth == 0 {
                     break;
                 }
             }
+
             _ => {}
         }
         buf.clear();

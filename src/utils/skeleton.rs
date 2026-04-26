@@ -23,19 +23,25 @@ pub fn push_line_to_skeleton(
         current_event_type,
         XmlEventType::Start | XmlEventType::Other
     ) {
-        if skeleton.previous_event_type == XmlEventType::Start {
+        if skeleton.previous_event_type == XmlEventType::Start
+            && !skeleton.previous_line.trim().is_empty()
+        {
             skeleton.content.push_str(&skeleton.previous_line);
             skeleton.content.push('\n');
         }
         skeleton.previous_line.clear();
-        skeleton.previous_line.push_str(&line);
+        if !skeleton.previous_line.trim().is_empty() {
+            skeleton.previous_line.push_str(&line);
+        }
     } else {
         // For non-start events (End, Text, CData, Comment), flush any pending line and
         // determine whether to inline (trim) the current content onto the same line.
         // This enables compact output like `<tag>value</tag>` on a single line.
         let has_pending = !skeleton.previous_line.is_empty();
         if has_pending {
-            skeleton.content.push_str(&skeleton.previous_line);
+            if !skeleton.previous_line.trim().is_empty() {
+                skeleton.content.push_str(&skeleton.previous_line);
+            }
             skeleton.previous_line.clear();
         }
 
@@ -55,11 +61,12 @@ pub fn push_line_to_skeleton(
             current_event_type == XmlEventType::End
                 && skeleton.previous_event_type != XmlEventType::End
         };
-
-        if inline {
-            skeleton.content.push_str(line.trim());
-        } else {
-            skeleton.content.push_str(&line);
+        if !line.trim().is_empty() {
+            if inline {
+                skeleton.content.push_str(line.trim());
+            } else {
+                skeleton.content.push_str(&line);
+            }
         }
         if current_event_type == XmlEventType::End {
             skeleton.content.push('\n');
