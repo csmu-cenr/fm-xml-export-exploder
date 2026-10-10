@@ -39,7 +39,7 @@ struct Args {
     lossless: bool,
 
     /// Specify the output tree root folder: domain or db (default)
-    #[arg(short = 't', long = "output_tree", value_enum, default_value_t = OutputTree::Db)]
+    #[arg(short = 't', long = "output-tree", value_enum, default_value_t = OutputTree::Db)]
     output_tree: OutputTree,
 
     /// Change spaces in the output file names to the specified character(s)
