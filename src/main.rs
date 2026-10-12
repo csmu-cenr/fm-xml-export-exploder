@@ -42,6 +42,10 @@ struct Args {
     #[arg(short = 't', long = "output_tree", value_enum, default_value_t = OutputTree::Db)]
     output_tree: OutputTree,
 
+    /// File extension for sanitized scripts (with or without a leading dot)
+    #[arg(long, default_value = ".txt")]
+    script_extension: String,
+
     /// Replace password values in sanitized output with bullet placeholders (••••••••)
     #[arg(long)]
     obfuscate_passwords: bool,
@@ -65,6 +69,7 @@ fn main() -> Result<()> {
         lossless: args.lossless,
         output_tree: args.output_tree,
         obfuscate_passwords: args.obfuscate_passwords,
+        script_extension: args.script_extension,
     };
 
     valid_dir_or_throw(&in_dir)?;
