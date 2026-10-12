@@ -1,0 +1,3 @@
+Record a timestamp at the start of each request.
+Record a timestamp at the end of each request.
+Record the elapsed time of each request.
