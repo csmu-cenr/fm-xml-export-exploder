@@ -166,7 +166,7 @@ pub fn write_text_file(output_file_path: &Path, content: &str, flags: &Flags) {
     write_file(&effective_output_file_path, &file_content);
 }
 
-/// Collapse consecutive spaces before replacing them in the output filename.
+/// Replace spaces and collapse runs of replacement characters in the output filename.
 fn filename_with_replaced_spaces(output_file_path: &Path, flags: &Flags) -> PathBuf {
     static SPACES: LazyLock<Regex> = LazyLock::new(|| Regex::new(" +").unwrap());
     let mut path = output_file_path.to_path_buf();
@@ -174,7 +174,15 @@ fn filename_with_replaced_spaces(output_file_path: &Path, flags: &Flags) -> Path
         if let Some(name) = path.file_name().and_then(|name| name.to_str()) {
             let normalized = SPACES.replace_all(name, " ");
             let name = normalized.replace(' ', replacement);
-            path.set_file_name(name);
+            let mut collapsed = String::with_capacity(name.len());
+            let mut previous = None;
+            for character in name.chars() {
+                if previous != Some(character) || !replacement.contains(character) {
+                    collapsed.push(character);
+                }
+                previous = Some(character);
+            }
+            path.set_file_name(collapsed);
         }
     }
     path
@@ -346,9 +354,18 @@ mod filename_space_tests {
         let path = Path::new("folder with spaces/Script  with   spaces.txt");
         assert_eq!(filename_with_replaced_spaces(path, &flags),
                    PathBuf::from("folder with spaces/Script-with-spaces.txt"));
+        let separators = Path::new("folder with spaces/Book  -- Title - ID  1.xml");
+        assert_eq!(filename_with_replaced_spaces(separators, &flags),
+                   PathBuf::from("folder with spaces/Book-Title-ID-1.xml"));
+        assert_eq!(filename_with_replaced_spaces(
+                       &filename_with_replaced_spaces(separators, &flags), &flags),
+                   filename_with_replaced_spaces(separators, &flags));
+        flags.change_filename_spaces = Some("_".to_owned());
+        assert_eq!(filename_with_replaced_spaces(Path::new("Book __ Title.txt"), &flags),
+                   PathBuf::from("Book_Title.txt"));
         flags.change_filename_spaces = Some("--".to_owned());
         assert_eq!(filename_with_replaced_spaces(path, &flags),
-                   PathBuf::from("folder with spaces/Script--with--spaces.txt"));
+                   PathBuf::from("folder with spaces/Script-with-spaces.txt"));
         flags.change_filename_spaces = Some("$1".to_owned());
         assert_eq!(filename_with_replaced_spaces(path, &flags),
                    PathBuf::from("folder with spaces/Script$1with$1spaces.txt"));
