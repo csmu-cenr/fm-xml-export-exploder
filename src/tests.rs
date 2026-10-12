@@ -13,6 +13,64 @@ mod tests {
     use crate::xml_processor::explode_xml;
 
     #[test]
+    fn script_extension_cli_default_and_override() {
+        use clap::Parser;
+
+        let args = crate::Args::try_parse_from(["exploder", "source", "target"]).unwrap();
+        assert_eq!(args.script_extension, ".txt");
+        let args = crate::Args::try_parse_from([
+            "exploder",
+            "source",
+            "target",
+            "--script-extension",
+            ".fmscript",
+        ])
+        .unwrap();
+        assert_eq!(args.script_extension, ".fmscript");
+    }
+
+    #[test]
+    fn sanitized_script_extension_preserves_nested_paths() {
+        use crate::script_sanitizer::create_sanitized_scripts;
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root =
+            std::env::temp_dir().join(format!("script-extension-{}-{unique}", std::process::id()));
+        let input = root.join("xml");
+        fs::create_dir_all(input.join("folder")).unwrap();
+        fs::write(
+            input.join("folder/Example.xml"),
+            "<Script><ScriptReference id=\"1\"></ScriptReference></Script>",
+        )
+        .unwrap();
+        for extension in [".txt", ".fmscript", "fmscript"] {
+            let output = root.join(format!("output-{extension}"));
+            let flags = Flags {
+                parse_all_lines: false,
+                lossless: false,
+                output_tree: OutputTree::Db,
+                obfuscate_passwords: false,
+                script_extension: extension.to_owned(),
+                change_filename_spaces: None,
+                remove_ddrrefs: false,
+            };
+            create_sanitized_scripts(&input, &output, &flags);
+            let expected = output
+                .join("folder/Example")
+                .with_extension(extension.trim_start_matches('.'));
+            assert!(expected.is_file(), "Missing {}", expected.display());
+            if extension != ".txt" {
+                assert!(!output.join("folder/Example.txt").exists());
+            }
+        }
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn test_escape_filename() {
         assert_eq!(escape_filename("filename.xml"), "filename.xml");
         assert_eq!(escape_filename("file/name.xml"), "file_name.xml");
@@ -52,6 +110,7 @@ mod tests {
             obfuscate_passwords: false,
             change_filename_spaces: Some("--".to_string()),
             remove_ddrrefs: false,
+            script_extension: ".txt".to_owned(),
         };
         let _ = fs::remove_dir_all(output_dir);
 

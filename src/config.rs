@@ -234,4 +234,5 @@ pub struct Flags {
     pub obfuscate_passwords: bool,
     pub change_filename_spaces: Option<String>,
     pub remove_ddrrefs: bool,
+    pub script_extension: String,
 }

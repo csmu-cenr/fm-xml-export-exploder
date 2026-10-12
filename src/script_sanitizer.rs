@@ -46,7 +46,9 @@ pub fn create_sanitized_scripts(
                 return;
             };
             if let Some(script_info) = parse_script_xml(&xml_content, flags) {
-                write_text_file(output_file_path, &script_info.text, flags);
+                let output_file_path =
+                    output_file_path.with_extension(flags.script_extension.trim_start_matches('.'));
+                write_text_file(&output_file_path, &script_info.text, flags);
             }
         },
     );

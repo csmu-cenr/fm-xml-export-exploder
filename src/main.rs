@@ -45,6 +45,9 @@ struct Args {
     /// Change spaces in the output file names to the specified character(s)
     #[arg(long, allow_hyphen_values = true)]
     change_filename_spaces: Option<String>,
+    /// File extension for sanitized scripts (with or without a leading dot)
+    #[arg(long, default_value = ".txt")]
+    script_extension: String,
 
     /// Replace password values in sanitized output with bullet placeholders (••••••••)
     #[arg(long)]
@@ -77,6 +80,7 @@ fn main() -> Result<()> {
         obfuscate_passwords: args.obfuscate_passwords,
         change_filename_spaces: args.change_filename_spaces,
         remove_ddrrefs: args.remove_ddrrefs,
+        script_extension: args.script_extension,
     };
 
     valid_dir_or_throw(&in_dir)?;
