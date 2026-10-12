@@ -145,18 +145,7 @@ pub fn write_xml_file(
         file_content.push('\n');
     }
 
-    let effective_output_file_path: PathBuf = if let Some(ref space_char) = flags.change_filename_spaces {
-        let mut new_path = output_file_path.to_path_buf();
-
-        if let Some(file_name) = new_path.file_name().and_then(|f| f.to_str()) {
-            let new_name = file_name.replace(' ', space_char);
-            new_path.set_file_name(new_name);
-        }
-
-        new_path
-    } else {
-        output_file_path.to_path_buf()
-    };
+    let effective_output_file_path = filename_with_replaced_spaces(output_file_path, flags);
 
     write_file(&effective_output_file_path, &file_content);
 }
@@ -172,20 +161,23 @@ pub fn write_text_file(output_file_path: &Path, content: &str, flags: &Flags) {
         file_content.push('\n');
     }
 
-    let effective_output_file_path: PathBuf = if let Some(ref space_char) = flags.change_filename_spaces {
-        let mut new_path = output_file_path.to_path_buf();
-
-        if let Some(file_name) = new_path.file_name().and_then(|f| f.to_str()) {
-            let new_name = file_name.replace(' ', space_char);
-            new_path.set_file_name(new_name);
-        }
-
-        new_path
-    } else {
-        output_file_path.to_path_buf()
-    };
+    let effective_output_file_path = filename_with_replaced_spaces(output_file_path, flags);
 
     write_file(&effective_output_file_path, &file_content);
+}
+
+/// Collapse consecutive spaces before replacing them in the output filename.
+fn filename_with_replaced_spaces(output_file_path: &Path, flags: &Flags) -> PathBuf {
+    static SPACES: LazyLock<Regex> = LazyLock::new(|| Regex::new(" +").unwrap());
+    let mut path = output_file_path.to_path_buf();
+    if let Some(replacement) = &flags.change_filename_spaces {
+        if let Some(name) = path.file_name().and_then(|name| name.to_str()) {
+            let normalized = SPACES.replace_all(name, " ");
+            let name = normalized.replace(' ', replacement);
+            path.set_file_name(name);
+        }
+    }
+    path
 }
 
 fn write_file(output_file_path: &Path, file_content: &str) {
@@ -332,5 +324,35 @@ mod tests {
         assert!(temp_file.exists());
 
         fs::remove_file(&temp_file).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod filename_space_tests {
+    use super::*;
+    use crate::config::OutputTree;
+
+    #[test]
+    fn filename_spaces_collapse_before_literal_replacement() {
+        let mut flags = Flags {
+            parse_all_lines: false,
+            lossless: false,
+            output_tree: OutputTree::Db,
+            obfuscate_passwords: false,
+            change_filename_spaces: Some("-".to_owned()),
+            remove_ddrrefs: false,
+            script_extension: ".txt".to_owned(),
+        };
+        let path = Path::new("folder with spaces/Script  with   spaces.txt");
+        assert_eq!(filename_with_replaced_spaces(path, &flags),
+                   PathBuf::from("folder with spaces/Script-with-spaces.txt"));
+        flags.change_filename_spaces = Some("--".to_owned());
+        assert_eq!(filename_with_replaced_spaces(path, &flags),
+                   PathBuf::from("folder with spaces/Script--with--spaces.txt"));
+        flags.change_filename_spaces = Some("$1".to_owned());
+        assert_eq!(filename_with_replaced_spaces(path, &flags),
+                   PathBuf::from("folder with spaces/Script$1with$1spaces.txt"));
+        flags.change_filename_spaces = None;
+        assert_eq!(filename_with_replaced_spaces(path, &flags), path);
     }
 }

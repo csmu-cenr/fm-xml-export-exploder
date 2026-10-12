@@ -42,7 +42,7 @@ struct Args {
     #[arg(short = 't', long = "output-tree", value_enum, default_value_t = OutputTree::Db)]
     output_tree: OutputTree,
 
-    /// Change spaces in the output file names to the specified character(s)
+    /// Collapse repeated spaces, then replace spaces in output filenames with the specified character(s)
     #[arg(long, allow_hyphen_values = true)]
     change_filename_spaces: Option<String>,
     /// File extension for sanitized scripts (with or without a leading dot)
