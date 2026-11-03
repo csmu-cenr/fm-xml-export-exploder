@@ -32,7 +32,7 @@ fm-xml-export-exploder [OPTIONS] <SOURCE> <TARGET>
 Exports split into one file per catalog (FileMaker 2026) work as well: put the summary file (e.g. `Datenbankbericht.xml`) and the folder it refers to in `SOURCE`. The catalog files in that folder are exploded together as one database. Since every catalog file has its own metadata and DDR_INFO, the files in `_` are named after the catalog, e.g. `metadata_ScriptCatalog.xml` and `ddr_info_ScriptCatalog.xml` (and `skeleton_ScriptCatalog.xml` with `--lossless`).
 
 | Option | Description |
-|---|---|
+| --- | --- |
 | `-t`, `--output-tree <db\|domain>` | Organize the output by database (`db`, default) or by domain (`domain`), see [Output](#output). `--output_tree` still works. |
 | `-c`, `--config <file>` | Read options from a config file, see [Config file](#config-file) |
 | `--git` | Commit the output with git, see below |
@@ -117,7 +117,7 @@ Then create `Run_XML_Export.fmp12` in that folder: a FileMaker file whose `OnFir
 
 The folder then contains:
 
-```
+```bash
 ├── bin/                    the exploder
 ├── xml/                    the XML export
 ├── repos/                  the output, one git repository per domain
@@ -133,7 +133,7 @@ Change the options in `fm-xml-export-exploder.toml` and run `run.bash` to export
 
 ### By database (default, `-t db`)
 
-```
+```bash
 └── <database>/
     ├── scripts/
     │   └── <folder> - ID <folder id>/
@@ -154,7 +154,7 @@ Change the options in `fm-xml-export-exploder.toml` and run `run.bash` to export
 
 ### By domain (`-t domain`)
 
-```
+```bash
 ├── scripts/
 │   └── <database>/
 │       └── <folder> - ID <folder id>/
