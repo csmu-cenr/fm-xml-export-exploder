@@ -100,6 +100,7 @@ pub fn explode_xml(
     let output = OutputFiles::default();
     let db_name = explode_file(fm_export_file_path, root_out_dir, flags, &output)?;
     if let Some(db_name) = &db_name {
+        crate::layouts_summary::write_summaries(root_out_dir, db_name, flags, &output)?;
         remove_stale_output(root_out_dir, flags, db_name, &output)?;
     }
     Ok(db_name)

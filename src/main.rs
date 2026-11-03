@@ -18,6 +18,7 @@ mod config;
 mod custom_function_sanitizer;
 mod git;
 mod input;
+mod layouts_summary;
 mod reassemble;
 mod script_sanitizer;
 mod script_steps;
@@ -88,6 +89,13 @@ fn main() -> Result<()> {
     if any_failed.load(Ordering::Relaxed) {
         eprintln!("Some files failed, so outdated output files were not removed.");
     } else {
+        if flags.layouts_summary_file_name.is_some() {
+            layouts_summary::write_summaries(&out_dir, "", &flags, &output)?;
+        } else {
+            for db_name in &db_names {
+                layouts_summary::write_summaries(&out_dir, db_name, &flags, &output)?;
+            }
+        }
         for db_name in &db_names {
             remove_stale_output(&out_dir, &flags, db_name, &output)?;
         }

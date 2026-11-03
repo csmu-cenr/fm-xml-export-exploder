@@ -246,6 +246,8 @@ pub enum OutputTree {
 }
 
 pub struct Flags {
+    pub layouts_summary: Option<String>,
+    pub layouts_summary_file_name: Option<std::path::PathBuf>,
     pub change_directory_spaces: Option<String>,
     pub change_filename_spaces: Option<String>,
     pub remove_ddrrefs: bool,

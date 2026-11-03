@@ -70,6 +70,14 @@ pub struct Args {
     #[arg(long, allow_hyphen_values = true, value_parser = parse_filename_replacement)]
     change_path_spaces: Option<String>,
 
+    /// Write a layout summary: csv (comma-separated), tab or txt (tab-separated)
+    #[arg(long, value_parser = parse_summary_extension)]
+    layouts_summary: Option<String>,
+
+    /// Override the summary output path, including locations outside the target directory
+    #[arg(long)]
+    layouts_summary_file_name: Option<PathBuf>,
+
     /// Remove DDRREF elements and their otherwise empty lines (also in lossless mode)
     #[arg(long)]
     remove_ddrrefs: bool,
@@ -107,6 +115,8 @@ pub struct ConfigFile {
     change_filename_spaces: Option<String>,
     remove_ddrrefs: Option<bool>,
     change_path_spaces: Option<String>,
+    layout_summary: Option<String>,
+    layout_summary_file_name: Option<PathBuf>,
 }
 
 impl ConfigFile {
@@ -135,6 +145,14 @@ impl ConfigFile {
             .map(|value| parse_filename_replacement(&value))
             .transpose()
             .map_err(anyhow::Error::msg)?;
+        config.layout_summary = config
+            .layout_summary
+            .map(|value| parse_summary_extension(&value))
+            .transpose()
+            .map_err(anyhow::Error::msg)?;
+        config.layout_summary_file_name = config
+            .layout_summary_file_name
+            .map(|path| resolve_path(base_dir, &path));
         Ok(config)
     }
 
@@ -186,11 +204,22 @@ impl Settings {
         };
         // A switch on the command line turns an option on; otherwise the config decides
         let switch = |cli: bool, config: Option<bool>| cli || config.unwrap_or(false);
+        let layout_summary = args.layouts_summary.or(config.layout_summary);
+        let layout_summary_file_name = args
+            .layouts_summary_file_name
+            .or(config.layout_summary_file_name);
+        if layout_summary_file_name.is_some() && layout_summary.is_none() {
+            bail!(
+                "--layouts-summary-file-name requires --layouts-summary (or layout_summary in config)"
+            );
+        }
         Ok(Settings {
             source,
             target,
             git: switch(args.git, config.git),
             flags: Flags {
+                layouts_summary: layout_summary,
+                layouts_summary_file_name: layout_summary_file_name,
                 change_directory_spaces: args
                     .change_directory_spaces
                     .or_else(|| args.change_path_spaces.clone())
@@ -251,6 +280,15 @@ fn parse_filename_replacement(value: &str) -> Result<String, String> {
         return Err("Filename replacement cannot contain path separators or NUL".to_string());
     }
     Ok(value.to_string())
+}
+
+fn parse_summary_extension(value: &str) -> Result<String, String> {
+    let value = value.trim_matches('.').to_ascii_lowercase();
+    if matches!(value.as_str(), "csv" | "tab" | "txt") {
+        Ok(value)
+    } else {
+        Err("Layout summary format must be csv, tab or txt".to_string())
+    }
 }
 
 #[cfg(test)]
@@ -394,6 +432,52 @@ change_filename_spaces = "_""#,
         assert_eq!(flags.change_directory_spaces.as_deref(), Some(""));
         assert!(args(&["s", "t", "--change-path-spaces", "a/b"]).is_err());
         assert!(ConfigFile::parse(r#"change_path_spaces = "a/b""#, Path::new("/")).is_err());
+    }
+
+    #[test]
+    fn layout_summary_options_and_config_paths() {
+        let settings = Settings::combine(
+            args(&[
+                "s",
+                "t",
+                "--layouts-summary",
+                ".csv",
+                "--layouts-summary-file-name",
+                "/tmp/reports/layouts.csv",
+            ])
+            .unwrap(),
+            ConfigFile::default(),
+            None,
+        )
+        .unwrap();
+        assert_eq!(settings.flags.layouts_summary.as_deref(), Some("csv"));
+        assert_eq!(
+            settings.flags.layouts_summary_file_name,
+            Some(PathBuf::from("/tmp/reports/layouts.csv"))
+        );
+        let settings = Settings::combine(
+            args(&["s", "t"]).unwrap(),
+            parse_config(
+                r#"layout_summary = "tab."
+layout_summary_file_name = "../reports/layouts.tab""#,
+            ),
+            None,
+        )
+        .unwrap();
+        assert_eq!(settings.flags.layouts_summary.as_deref(), Some("tab"));
+        assert_eq!(
+            settings.flags.layouts_summary_file_name,
+            Some(PathBuf::from("/install/../reports/layouts.tab"))
+        );
+        assert!(args(&["s", "t", "--layouts-summary", "xml"]).is_err());
+        assert!(
+            Settings::combine(
+                args(&["s", "t", "--layouts-summary-file-name", "summary.csv"]).unwrap(),
+                ConfigFile::default(),
+                None
+            )
+            .is_err()
+        );
     }
 
     #[test]

@@ -46,6 +46,11 @@ impl OutputFiles {
         }
     }
 
+    /// Snapshot of current output paths, excluding stale files left from earlier runs.
+    pub fn paths(&self) -> Vec<PathBuf> {
+        self.written.lock().unwrap().keys().cloned().collect()
+    }
+
     /// Whether `path` was written during this run.
     pub fn contains(&self, path: &Path) -> bool {
         self.written.lock().unwrap().contains_key(path)

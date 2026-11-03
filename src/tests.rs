@@ -48,6 +48,8 @@ mod tests {
         for (tree, name) in [(OutputTree::Db, "db"), (OutputTree::Domain, "domain")] {
             let output = root.join(name);
             let mut flags = Flags {
+                layouts_summary: None,
+                layouts_summary_file_name: None,
                 change_directory_spaces: Some("-".to_string()),
                 change_filename_spaces: Some("-".to_string()),
                 remove_ddrrefs: true,
@@ -101,6 +103,8 @@ mod tests {
         for (tree, name) in [(OutputTree::Db, "db"), (OutputTree::Domain, "domain")] {
             let output = root.join("target with spaces").join(name);
             let mut flags = Flags {
+                layouts_summary: Some("csv".to_string()),
+                layouts_summary_file_name: None,
                 change_directory_spaces: None,
                 change_filename_spaces: None,
                 remove_ddrrefs: false,
@@ -191,6 +195,8 @@ mod tests {
         )
         .unwrap();
         let flags = Flags {
+            layouts_summary: None,
+            layouts_summary_file_name: None,
             change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
@@ -244,6 +250,8 @@ mod tests {
         )
         .unwrap();
         let flags = Flags {
+            layouts_summary: None,
+            layouts_summary_file_name: None,
             change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
@@ -273,6 +281,8 @@ mod tests {
             ));
             let _ = fs::remove_dir_all(&dir);
             let flags = Flags {
+                layouts_summary: None,
+                layouts_summary_file_name: None,
                 change_directory_spaces: None,
                 change_filename_spaces: None,
                 remove_ddrrefs: false,
@@ -351,6 +361,8 @@ mod tests {
 "#;
         fs::write(dir.join("in/T.xml"), export).unwrap();
         let flags = Flags {
+            layouts_summary: None,
+            layouts_summary_file_name: None,
             change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
@@ -374,6 +386,8 @@ mod tests {
         fs::create_dir_all(dir.join("in")).unwrap();
         fs::write(dir.join("in/T.xml"), export).unwrap();
         let flags = Flags {
+            layouts_summary: None,
+            layouts_summary_file_name: None,
             change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
@@ -430,6 +444,8 @@ mod tests {
             ),
         ];
         let flags = Flags {
+            layouts_summary: None,
+            layouts_summary_file_name: None,
             change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
@@ -653,6 +669,8 @@ mod tests {
         ));
         let _ = fs::remove_dir_all(&dir);
         let flags = Flags {
+            layouts_summary: None,
+            layouts_summary_file_name: None,
             change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
@@ -682,6 +700,8 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         let input = PathBuf::from("tests/xml/Ooe - saxml_v_2_2_3_4.xml");
         let flags = |script_extension: &str| Flags {
+            layouts_summary: None,
+            layouts_summary_file_name: None,
             change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
@@ -740,6 +760,8 @@ mod tests {
         let path_str = format!("./tests/out_{output_tree_str}_{lossless_str}");
         let output_dir = Path::new(&path_str);
         let flags = Flags {
+            layouts_summary: None,
+            layouts_summary_file_name: None,
             change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,

@@ -349,6 +349,8 @@ mod tests {
 
     fn lossless() -> Flags {
         Flags {
+            layouts_summary: None,
+            layouts_summary_file_name: None,
             change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
@@ -469,6 +471,8 @@ mod filename_space_tests {
     #[test]
     fn directory_spaces_preserve_target_and_filename() {
         let mut flags = Flags {
+            layouts_summary: None,
+            layouts_summary_file_name: None,
             change_directory_spaces: Some("--".to_owned()),
             change_filename_spaces: None,
             remove_ddrrefs: false,
@@ -496,6 +500,8 @@ mod filename_space_tests {
     #[test]
     fn filename_spaces_collapse_before_literal_replacement() {
         let mut flags = Flags {
+            layouts_summary: None,
+            layouts_summary_file_name: None,
             parse_all_lines: false,
             lossless: false,
             output_tree: OutputTree::Db,
