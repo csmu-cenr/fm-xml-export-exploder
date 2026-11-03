@@ -99,11 +99,14 @@ pub fn derived_file_name(xml: &str, path_stack: &[String], tag_name: &str) -> Op
         .filter_map(|r| r.as_deref())
         .collect();
 
-    Some(escape_filename(&if name_parts.is_empty() {
-        format!("ID {id}.xml")
-    } else {
-        format!("{} - ID {id}.xml", name_parts.join(" - "))
-    }))
+    let mut file_name = name_parts.join(" - ");
+    if !name_parts.is_empty() {
+        file_name.push_str(" - ");
+    }
+    file_name.push_str("ID ");
+    file_name.push_str(id);
+    file_name.push_str(".xml");
+    Some(escape_filename(&file_name))
 }
 
 pub fn create_dir(dir_path: &Path) {
@@ -269,11 +272,11 @@ mod tests {
 </Account>"#;
 
     fn path_stack(section: &str) -> Vec<String> {
-        vec![
+        Vec::from([
             "SomeElement".to_owned(),
             section.to_owned(),
             "AddAction".to_owned(),
-        ]
+        ])
     }
 
     #[test]
