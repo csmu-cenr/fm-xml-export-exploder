@@ -5,6 +5,7 @@
 		}
 	],
 	"settings": {
+		"rust-analyzer.linkedProjects": ["./Cargo.toml"],
 		"editor.detectIndentation": true,
 		"editor.insertSpaces": true,
 		"editor.tabSize": 4,
