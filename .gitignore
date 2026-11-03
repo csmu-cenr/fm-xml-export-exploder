@@ -25,3 +25,8 @@ skills-lock.json
 
 # macOS
 .DS_Store
+
+# Local development
+.vscode*
+helper.priset
+.gitignore-csmu

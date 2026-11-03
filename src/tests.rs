@@ -17,6 +17,70 @@ mod tests {
     use crate::xml_processor::{explode_file, explode_xml};
 
     #[test]
+    fn custom_options_preserve_upstream_output_and_reassembly() {
+        let root = std::env::temp_dir().join(format!("fm-custom-options-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        let input = root.join("source.xml");
+        let mut original = String::new();
+        DecodeReaderBytes::new(fs::File::open("tests/xml/Ooe - saxml_v_2_2_3_4.xml").unwrap())
+            .read_to_string(&mut original)
+            .unwrap();
+        // Exercise DDRREF removal in a catalog item, including nested content.
+        let xml = original.replacen(
+            "</Script>",
+            "<DDRREF><Child>reference</Child></DDRREF></Script>",
+            1,
+        );
+        assert_ne!(xml, original);
+        fs::write(&input, &xml).unwrap();
+        for (tree, name) in [(OutputTree::Db, "db"), (OutputTree::Domain, "domain")] {
+            let output = root.join(name);
+            let mut flags = Flags {
+                change_filename_spaces: None,
+                remove_ddrrefs: false,
+                parse_all_lines: false,
+                lossless: true,
+                output_tree: tree,
+                obfuscate_passwords: false,
+                script_extension: "fmscript".to_string(),
+            };
+            explode_xml(&input, &output, &flags).unwrap();
+            let old_names: Vec<_> = WalkDir::new(&output)
+                .into_iter()
+                .flatten()
+                .filter(|e| {
+                    e.file_type().is_file() && e.file_name().to_string_lossy().contains(' ')
+                })
+                .map(|e| e.into_path())
+                .collect();
+            assert!(!old_names.is_empty());
+            flags.change_filename_spaces = Some("-".to_string());
+            flags.remove_ddrrefs = true;
+            explode_xml(&input, &output, &flags).unwrap();
+            for entry in WalkDir::new(&output)
+                .into_iter()
+                .flatten()
+                .filter(|e| e.file_type().is_file())
+            {
+                assert!(!entry.file_name().to_string_lossy().contains(' '));
+                assert!(
+                    !fs::read_to_string(entry.path())
+                        .unwrap()
+                        .contains("<DDRREF>")
+                );
+            }
+            assert!(old_names.iter().all(|path| !path.exists()));
+            let rebuilt = root.join(format!("rebuilt-{name}"));
+            assert!(reassemble(&output, &rebuilt).unwrap().is_empty());
+            let result = fs::read_to_string(rebuilt.join("Ooe.xml")).unwrap();
+            assert!(!result.contains("<DDRREF>"));
+            assert_eq!(result, original);
+        }
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn test_escape_filename() {
         assert_eq!(escape_filename("filename.xml"), "filename.xml");
         assert_eq!(escape_filename("file/name.xml"), "file_name.xml");
@@ -54,6 +118,8 @@ mod tests {
         )
         .unwrap();
         let flags = Flags {
+            change_filename_spaces: None,
+            remove_ddrrefs: false,
             parse_all_lines: false,
             lossless: false,
             output_tree: OutputTree::Db,
@@ -104,6 +170,8 @@ mod tests {
         )
         .unwrap();
         let flags = Flags {
+            change_filename_spaces: None,
+            remove_ddrrefs: false,
             parse_all_lines: false,
             lossless: false,
             output_tree: OutputTree::Db,
@@ -130,6 +198,8 @@ mod tests {
             ));
             let _ = fs::remove_dir_all(&dir);
             let flags = Flags {
+                change_filename_spaces: None,
+                remove_ddrrefs: false,
                 parse_all_lines: false,
                 lossless: true,
                 output_tree,
@@ -205,6 +275,8 @@ mod tests {
 "#;
         fs::write(dir.join("in/T.xml"), export).unwrap();
         let flags = Flags {
+            change_filename_spaces: None,
+            remove_ddrrefs: false,
             parse_all_lines: false,
             lossless: true,
             output_tree: OutputTree::Db,
@@ -225,6 +297,8 @@ mod tests {
         fs::create_dir_all(dir.join("in")).unwrap();
         fs::write(dir.join("in/T.xml"), export).unwrap();
         let flags = Flags {
+            change_filename_spaces: None,
+            remove_ddrrefs: false,
             parse_all_lines: false,
             lossless: true,
             output_tree: OutputTree::Db,
@@ -278,6 +352,8 @@ mod tests {
             ),
         ];
         let flags = Flags {
+            change_filename_spaces: None,
+            remove_ddrrefs: false,
             parse_all_lines: false,
             lossless: true,
             output_tree: OutputTree::Db,
@@ -498,6 +574,8 @@ mod tests {
         ));
         let _ = fs::remove_dir_all(&dir);
         let flags = Flags {
+            change_filename_spaces: None,
+            remove_ddrrefs: false,
             parse_all_lines: false,
             lossless: false,
             output_tree: OutputTree::Db,
@@ -524,6 +602,8 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         let input = PathBuf::from("tests/xml/Ooe - saxml_v_2_2_3_4.xml");
         let flags = |script_extension: &str| Flags {
+            change_filename_spaces: None,
+            remove_ddrrefs: false,
             parse_all_lines: false,
             lossless: false,
             output_tree: OutputTree::Db,
@@ -579,6 +659,8 @@ mod tests {
         let path_str = format!("./tests/out_{output_tree_str}_{lossless_str}");
         let output_dir = Path::new(&path_str);
         let flags = Flags {
+            change_filename_spaces: None,
+            remove_ddrrefs: false,
             parse_all_lines: false,
             lossless: is_lossless,
             output_tree,

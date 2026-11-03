@@ -37,6 +37,8 @@ Exports split into one file per catalog (FileMaker 2026) work as well: put the s
 | `-c`, `--config <file>` | Read options from a config file, see [Config file](#config-file) |
 | `--git` | Commit the output with git, see below |
 | `--obfuscate-passwords` | Replace passwords in readable scripts with `••••••••` |
+| `--change-filename-spaces <text>` | Replace spaces in output filenames and collapse repeated replacement characters; directory names stay unchanged. Use `--change-filename-spaces=-` for hyphens. |
+| `--remove-ddrrefs` | Remove DDRREF elements without leaving empty lines. This also removes them from lossless output, so reassembly no longer reproduces those references. |
 | `--script-extension <ext>` | File extension of the readable scripts in `scripts_sanitized` (default `txt`), e.g. `fmscript` for syntax highlighting in your editor |
 | `-a`, `--all-lines` | Keep lines that are skipped by default to reduce noise |
 | `-l`, `--lossless` | Keep all information of the XML, including less important catalogs and attributes, so the export can be [reassembled](#reassembling-an-export) |
@@ -51,6 +53,8 @@ target = "./repos"       # folder for the output
 output_tree = "domain"   # "db" or "domain"
 git = true
 script_extension = "txt"
+# change_filename_spaces = "-"
+remove_ddrrefs = false
 obfuscate_passwords = true
 all_lines = false
 lossless = false

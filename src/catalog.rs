@@ -156,7 +156,10 @@ pub fn xml_explode_catalog<R: Read + BufRead>(
                     }
                     None => out_dir_path_base.clone(),
                 };
-                let path = dir.join(file_name);
+                let path = crate::utils::filename_with_replaced_spaces(
+                    &dir.join(file_name),
+                    context.flags,
+                );
                 if let Some(parent) = path.parent()
                     && parent != dir
                 {

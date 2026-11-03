@@ -428,3 +428,81 @@ mod tests {
         assert_eq!(escape_xml_entities("plain text".to_string()), "plain text");
     }
 }
+
+/// Removes actual DDRREF elements, leaving matching text in comments, CDATA and
+/// attribute values alone. Remove an entire line only when it held just the element.
+pub fn remove_ddrrefs(xml: &str) -> String {
+    let mut reader = Reader::from_str(xml);
+    let mut result = String::with_capacity(xml.len());
+    let mut copied = 0;
+    loop {
+        let start = reader.buffer_position() as usize;
+        let event = match reader.read_event() {
+            Ok(event) => event,
+            Err(_) => break,
+        };
+        let is_ddrref = match &event {
+            Event::Start(tag) | Event::Empty(tag) => tag.name().as_ref() == "DDRREF",
+            _ => false,
+        };
+        if is_ddrref {
+            if matches!(event, Event::Start(_)) {
+                let mut depth = 1;
+                while depth > 0 {
+                    match reader.read_event() {
+                        Ok(Event::Start(_)) => depth += 1,
+                        Ok(Event::End(_)) => depth -= 1,
+                        Ok(Event::Eof) | Err(_) => break,
+                        _ => {}
+                    }
+                }
+                if depth != 0 {
+                    // Preserve malformed input rather than removing unrelated content.
+                    break;
+                }
+            }
+            let mut end = reader.buffer_position() as usize;
+            let line_start = xml[..start].rfind('\n').map_or(0, |i| i + 1).max(copied);
+            let line_end = xml[end..].find('\n').map_or(xml.len(), |i| end + i);
+            let standalone =
+                xml[line_start..start].trim().is_empty() && xml[end..line_end].trim().is_empty();
+            let remove_start = if standalone { line_start } else { start };
+            if standalone {
+                end = if line_end < xml.len() {
+                    line_end + 1
+                } else {
+                    line_end
+                };
+            }
+            result.push_str(&xml[copied..remove_start]);
+            copied = end;
+        }
+        if matches!(event, Event::Eof) {
+            break;
+        }
+    }
+    result.push_str(&xml[copied..]);
+    result
+}
+
+#[cfg(test)]
+mod ddrref_tests {
+    use super::remove_ddrrefs;
+
+    #[test]
+    fn removes_nested_and_empty_elements_without_blank_lines() {
+        let xml = "<Root>\n\t<DDRREF><Child>value</Child></DDRREF>\n\t<DDRREF/>\n\t<Keep>value</Keep>\n</Root>\n";
+        assert_eq!(
+            remove_ddrrefs(xml),
+            "<Root>\n\t<Keep>value</Keep>\n</Root>\n"
+        );
+        assert_eq!(remove_ddrrefs("<R>a<DDRREF>x</DDRREF>b</R>"), "<R>ab</R>");
+    }
+
+    #[test]
+    fn preserves_text_cdata_comments_and_other_tags() {
+        let xml =
+            "<R name=\"DDRREF\"><![CDATA[<DDRREF>x</DDRREF>]]><!-- <DDRREF/> --><DDRREFS/></R>";
+        assert_eq!(remove_ddrrefs(xml), xml);
+    }
+}

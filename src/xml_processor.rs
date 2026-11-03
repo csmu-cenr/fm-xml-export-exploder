@@ -1,6 +1,6 @@
+use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
-use std::{fs::File, time::Instant};
 
 use anyhow::{Context, Result, anyhow, bail};
 use encoding_rs_io::DecodeReaderBytes;
@@ -127,9 +127,6 @@ pub fn explode_file(
     flags: &Flags,
     output: &OutputFiles,
 ) -> Result<Option<String>> {
-    let start = Instant::now();
-    let fm_export_file_name = fm_export_file_path.file_name().unwrap().to_str().unwrap();
-
     // Open XML file
     let file = File::open(fm_export_file_path)
         .with_context(|| format!("Error opening file {}", fm_export_file_path.display()))?;
@@ -222,12 +219,6 @@ pub fn explode_file(
     if flags.lossless {
         write_skeleton_file(&context)?;
     }
-
-    println!(
-        "→ {} finished in {} ms.",
-        fm_export_file_name,
-        start.elapsed().as_millis()
-    );
 
     Ok(context.doc_info.map(|doc_info| doc_info.db_name))
 }

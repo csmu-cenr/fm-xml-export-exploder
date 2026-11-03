@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use regex::Regex;
@@ -115,6 +115,13 @@ pub fn create_dir(dir_path: &Path) {
 /// lines are kept, noisy lines. Lines that continue a CDATA section or a text value
 /// are content, so they keep their tabs, and carriage returns are kept as well.
 pub fn prepare_xml_content(content: &str, remove_indent_count: usize, flags: &Flags) -> String {
+    let filtered;
+    let content = if flags.remove_ddrrefs {
+        filtered = xml_utils::remove_ddrrefs(content);
+        filtered.as_str()
+    } else {
+        content
+    };
     let indent_prefix = "\t".repeat(remove_indent_count);
     let filter_noisy_lines = !flags.parse_all_lines && !flags.lossless;
     let mut file_content = String::with_capacity(content.len());
@@ -228,7 +235,7 @@ pub fn write_xml_file(
     flags: &Flags,
 ) {
     output.write(
-        output_file_path,
+        &filename_with_replaced_spaces(output_file_path, flags),
         &prepare_xml_content(content, remove_indent_count, flags),
     );
 }
@@ -322,6 +329,8 @@ mod tests {
 
     fn lossless() -> Flags {
         Flags {
+            change_filename_spaces: None,
+            remove_ddrrefs: false,
             parse_all_lines: false,
             lossless: true,
             output_tree: crate::config::OutputTree::Db,
@@ -372,5 +381,80 @@ mod tests {
             derived_file_name(ACCOUNT, &path_stack("Structure"), "Script"),
             None
         );
+    }
+}
+
+/// Replace spaces and collapse runs of replacement characters in the output filename.
+pub(crate) fn filename_with_replaced_spaces(output_file_path: &Path, flags: &Flags) -> PathBuf {
+    static SPACES: LazyLock<Regex> = LazyLock::new(|| Regex::new(" +").unwrap());
+    let mut path = output_file_path.to_path_buf();
+    if let Some(replacement) = &flags.change_filename_spaces
+        && let Some(name) = path.file_name().and_then(|name| name.to_str())
+    {
+        let normalized = SPACES.replace_all(name, " ");
+        let name = normalized.replace(' ', replacement);
+        let mut collapsed = String::with_capacity(name.len());
+        let mut previous = None;
+        for character in name.chars() {
+            if previous != Some(character) || !replacement.contains(character) {
+                collapsed.push(character);
+            }
+            previous = Some(character);
+        }
+        path.set_file_name(collapsed);
+    }
+    path
+}
+
+#[cfg(test)]
+mod filename_space_tests {
+    use super::*;
+    use crate::config::OutputTree;
+
+    #[test]
+    fn filename_spaces_collapse_before_literal_replacement() {
+        let mut flags = Flags {
+            parse_all_lines: false,
+            lossless: false,
+            output_tree: OutputTree::Db,
+            obfuscate_passwords: false,
+            change_filename_spaces: Some("-".to_owned()),
+            remove_ddrrefs: false,
+            script_extension: ".txt".to_owned(),
+        };
+        let path = Path::new("folder with spaces/Script  with   spaces.txt");
+        assert_eq!(
+            filename_with_replaced_spaces(path, &flags),
+            PathBuf::from("folder with spaces/Script-with-spaces.txt")
+        );
+        let separators = Path::new("folder with spaces/Book  -- Title - ID  1.xml");
+        assert_eq!(
+            filename_with_replaced_spaces(separators, &flags),
+            PathBuf::from("folder with spaces/Book-Title-ID-1.xml")
+        );
+        assert_eq!(
+            filename_with_replaced_spaces(
+                &filename_with_replaced_spaces(separators, &flags),
+                &flags
+            ),
+            filename_with_replaced_spaces(separators, &flags)
+        );
+        flags.change_filename_spaces = Some("_".to_owned());
+        assert_eq!(
+            filename_with_replaced_spaces(Path::new("Book __ Title.txt"), &flags),
+            PathBuf::from("Book_Title.txt")
+        );
+        flags.change_filename_spaces = Some("--".to_owned());
+        assert_eq!(
+            filename_with_replaced_spaces(path, &flags),
+            PathBuf::from("folder with spaces/Script-with-spaces.txt")
+        );
+        flags.change_filename_spaces = Some("$1".to_owned());
+        assert_eq!(
+            filename_with_replaced_spaces(path, &flags),
+            PathBuf::from("folder with spaces/Script$1with$1spaces.txt")
+        );
+        flags.change_filename_spaces = None;
+        assert_eq!(filename_with_replaced_spaces(path, &flags), path);
     }
 }

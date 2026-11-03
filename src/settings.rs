@@ -58,6 +58,14 @@ pub struct Args {
     #[arg(long)]
     obfuscate_passwords: bool,
 
+    /// Replace filename spaces, collapsing repeated spaces and replacement characters
+    #[arg(long, allow_hyphen_values = true, value_parser = parse_filename_replacement)]
+    change_filename_spaces: Option<String>,
+
+    /// Remove DDRREF elements and their otherwise empty lines (also in lossless mode)
+    #[arg(long)]
+    remove_ddrrefs: bool,
+
     /// Commit the output with git: one repository per database folder (-t db) or per
     /// domain folder (-t domain). Folders inside another git repository are skipped.
     #[arg(long)]
@@ -87,6 +95,8 @@ pub struct ConfigFile {
     obfuscate_passwords: Option<bool>,
     all_lines: Option<bool>,
     lossless: Option<bool>,
+    change_filename_spaces: Option<String>,
+    remove_ddrrefs: Option<bool>,
 }
 
 impl ConfigFile {
@@ -98,6 +108,11 @@ impl ConfigFile {
         config.script_extension = config
             .script_extension
             .map(|extension| parse_file_extension(&extension))
+            .transpose()
+            .map_err(anyhow::Error::msg)?;
+        config.change_filename_spaces = config
+            .change_filename_spaces
+            .map(|value| parse_filename_replacement(&value))
             .transpose()
             .map_err(anyhow::Error::msg)?;
         Ok(config)
@@ -156,6 +171,10 @@ impl Settings {
             target,
             git: switch(args.git, config.git),
             flags: Flags {
+                change_filename_spaces: args
+                    .change_filename_spaces
+                    .or(config.change_filename_spaces),
+                remove_ddrrefs: switch(args.remove_ddrrefs, config.remove_ddrrefs),
                 parse_all_lines: switch(args.all_lines, config.all_lines),
                 lossless: switch(args.lossless, config.lossless),
                 output_tree: args
@@ -197,6 +216,14 @@ fn resolve_path(base_dir: &Path, path: &Path) -> PathBuf {
         .components()
         .filter(|component| !matches!(component, Component::CurDir))
         .collect()
+}
+
+// A replacement must stay within a filename, rather than introducing a path.
+fn parse_filename_replacement(value: &str) -> Result<String, String> {
+    if value.contains(['/', '\\', '\0']) {
+        return Err("Filename replacement cannot contain path separators or NUL".to_string());
+    }
+    Ok(value.to_string())
 }
 
 #[cfg(test)]
@@ -251,6 +278,31 @@ mod tests {
                 "{invalid:?}"
             );
         }
+    }
+
+    #[test]
+    fn custom_options_from_config_and_cli() {
+        let config = parse_config(
+            r#"change_filename_spaces = "_"
+remove_ddrrefs = true"#,
+        );
+        let settings = Settings::combine(
+            args(&["s", "t", "--change-filename-spaces", "-"]).unwrap(),
+            config,
+            None,
+        )
+        .unwrap();
+        assert_eq!(settings.flags.change_filename_spaces.as_deref(), Some("-"));
+        assert!(settings.flags.remove_ddrrefs);
+        let settings = Settings::combine(
+            args(&["s", "t", "--remove-ddrrefs"]).unwrap(),
+            ConfigFile::default(),
+            None,
+        )
+        .unwrap();
+        assert!(settings.flags.remove_ddrrefs);
+        assert!(args(&["s", "t", "--change-filename-spaces", "a/b"]).is_err());
+        assert!(ConfigFile::parse(r#"change_filename_spaces = "a/b""#, Path::new("/")).is_err());
     }
 
     #[test]
