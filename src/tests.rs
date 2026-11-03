@@ -24,7 +24,7 @@ mod tests {
         fs::create_dir_all(&root).unwrap();
         let input = root.join("input.xml");
         let mut xml = String::from(
-            "<FMSaveAsXML version=\"2.3.0.0\" File=\"T.fmp12\"><Structure><ModifyAction><FieldsForTables>",
+            "<FMSaveAsXML version=\"2.3.0.0\" File=\"T Test.fmp12\"><Structure><ModifyAction><FieldsForTables>",
         );
         for (id, table, value) in [
             (213, "TABLE_TEMPLATE", "Get ( foundCount )"),
@@ -47,7 +47,8 @@ mod tests {
         fs::write(&input, xml).unwrap();
         for (tree, name) in [(OutputTree::Db, "db"), (OutputTree::Domain, "domain")] {
             let output = root.join(name);
-            let flags = Flags {
+            let mut flags = Flags {
+                change_directory_spaces: Some("-".to_string()),
                 change_filename_spaces: Some("-".to_string()),
                 remove_ddrrefs: true,
                 parse_all_lines: false,
@@ -56,16 +57,21 @@ mod tests {
                 obfuscate_passwords: false,
                 script_extension: "txt".to_string(),
             };
+            flags.change_directory_spaces = None;
             explode_xml(&input, &output, &flags).unwrap();
+            flags.change_directory_spaces = Some("-".to_string());
+            explode_xml(&input, &output, &flags).unwrap();
+            assert!(!output.join("T Test").exists());
+            assert!(!output.join("tables__modify_action/T Test").exists());
             let domain = match flags.output_tree {
-                OutputTree::Db => output.join("T/tables__modify_action"),
-                OutputTree::Domain => output.join("tables__modify_action/T"),
+                OutputTree::Db => output.join("T-Test/tables__modify_action"),
+                OutputTree::Domain => output.join("tables__modify_action/T-Test"),
             };
             for (table, id, value) in [
                 ("TABLE_TEMPLATE", 213, "Get ( foundCount )"),
                 ("OTHER_TABLE", 214, "42"),
             ] {
-                let path = domain.join(format!("{table} - ID {id}/found_count-ID-6.xml"));
+                let path = domain.join(format!("{table}-ID-{id}/found_count-ID-6.xml"));
                 let content = fs::read_to_string(path).unwrap();
                 assert!(content.contains(value));
             }
@@ -93,8 +99,9 @@ mod tests {
         assert_ne!(xml, original);
         fs::write(&input, &xml).unwrap();
         for (tree, name) in [(OutputTree::Db, "db"), (OutputTree::Domain, "domain")] {
-            let output = root.join(name);
+            let output = root.join("target with spaces").join(name);
             let mut flags = Flags {
+                change_directory_spaces: None,
                 change_filename_spaces: None,
                 remove_ddrrefs: false,
                 parse_all_lines: false,
@@ -114,6 +121,7 @@ mod tests {
                 .collect();
             assert!(!old_names.is_empty());
             flags.change_filename_spaces = Some("-".to_string());
+            flags.change_directory_spaces = Some("-".to_string());
             flags.remove_ddrrefs = true;
             explode_xml(&input, &output, &flags).unwrap();
             for entry in WalkDir::new(&output)
@@ -121,7 +129,14 @@ mod tests {
                 .flatten()
                 .filter(|e| e.file_type().is_file())
             {
-                assert!(!entry.file_name().to_string_lossy().contains(' '));
+                assert!(
+                    !entry
+                        .path()
+                        .strip_prefix(&output)
+                        .unwrap()
+                        .to_string_lossy()
+                        .contains(' ')
+                );
                 assert!(
                     !fs::read_to_string(entry.path())
                         .unwrap()
@@ -176,6 +191,7 @@ mod tests {
         )
         .unwrap();
         let flags = Flags {
+            change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
             parse_all_lines: false,
@@ -228,6 +244,7 @@ mod tests {
         )
         .unwrap();
         let flags = Flags {
+            change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
             parse_all_lines: false,
@@ -256,6 +273,7 @@ mod tests {
             ));
             let _ = fs::remove_dir_all(&dir);
             let flags = Flags {
+                change_directory_spaces: None,
                 change_filename_spaces: None,
                 remove_ddrrefs: false,
                 parse_all_lines: false,
@@ -333,6 +351,7 @@ mod tests {
 "#;
         fs::write(dir.join("in/T.xml"), export).unwrap();
         let flags = Flags {
+            change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
             parse_all_lines: false,
@@ -355,6 +374,7 @@ mod tests {
         fs::create_dir_all(dir.join("in")).unwrap();
         fs::write(dir.join("in/T.xml"), export).unwrap();
         let flags = Flags {
+            change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
             parse_all_lines: false,
@@ -410,6 +430,7 @@ mod tests {
             ),
         ];
         let flags = Flags {
+            change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
             parse_all_lines: false,
@@ -632,6 +653,7 @@ mod tests {
         ));
         let _ = fs::remove_dir_all(&dir);
         let flags = Flags {
+            change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
             parse_all_lines: false,
@@ -660,6 +682,7 @@ mod tests {
         let _ = fs::remove_dir_all(&dir);
         let input = PathBuf::from("tests/xml/Ooe - saxml_v_2_2_3_4.xml");
         let flags = |script_extension: &str| Flags {
+            change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
             parse_all_lines: false,
@@ -717,6 +740,7 @@ mod tests {
         let path_str = format!("./tests/out_{output_tree_str}_{lossless_str}");
         let output_dir = Path::new(&path_str);
         let flags = Flags {
+            change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
             parse_all_lines: false,

@@ -65,7 +65,7 @@ pub fn build_out_dir_path<R: std::io::Read + BufRead>(
         context.root_out_dir,
         &context.flags.output_tree,
         &domain,
-        db_name,
+        &crate::utils::directory_name_with_replaced_spaces(db_name, context.flags),
     ))
 }
 

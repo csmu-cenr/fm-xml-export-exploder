@@ -17,7 +17,7 @@ pub const CONFIG_FILE_NAME: &str = "fm-xml-export-exploder.toml";
 /// Parse all as XML exported FileMaker solutions from source directory and explode them to target directory.
 #[derive(Parser)]
 #[command(
-    version,
+    version = crate::VERSION,
     about,
     long_about = None,
     args_conflicts_with_subcommands = true,
@@ -62,6 +62,10 @@ pub struct Args {
     #[arg(long, allow_hyphen_values = true, value_parser = parse_filename_replacement)]
     change_filename_spaces: Option<String>,
 
+    /// Replace spaces in generated directory names, collapsing repeated replacement characters
+    #[arg(long, allow_hyphen_values = true, value_parser = parse_filename_replacement)]
+    change_directory_spaces: Option<String>,
+
     /// Remove DDRREF elements and their otherwise empty lines (also in lossless mode)
     #[arg(long)]
     remove_ddrrefs: bool,
@@ -95,6 +99,7 @@ pub struct ConfigFile {
     obfuscate_passwords: Option<bool>,
     all_lines: Option<bool>,
     lossless: Option<bool>,
+    change_directory_spaces: Option<String>,
     change_filename_spaces: Option<String>,
     remove_ddrrefs: Option<bool>,
 }
@@ -112,6 +117,11 @@ impl ConfigFile {
             .map_err(anyhow::Error::msg)?;
         config.change_filename_spaces = config
             .change_filename_spaces
+            .map(|value| parse_filename_replacement(&value))
+            .transpose()
+            .map_err(anyhow::Error::msg)?;
+        config.change_directory_spaces = config
+            .change_directory_spaces
             .map(|value| parse_filename_replacement(&value))
             .transpose()
             .map_err(anyhow::Error::msg)?;
@@ -171,6 +181,9 @@ impl Settings {
             target,
             git: switch(args.git, config.git),
             flags: Flags {
+                change_directory_spaces: args
+                    .change_directory_spaces
+                    .or(config.change_directory_spaces),
                 change_filename_spaces: args
                     .change_filename_spaces
                     .or(config.change_filename_spaces),
@@ -303,6 +316,24 @@ remove_ddrrefs = true"#,
         assert!(settings.flags.remove_ddrrefs);
         assert!(args(&["s", "t", "--change-filename-spaces", "a/b"]).is_err());
         assert!(ConfigFile::parse(r#"change_filename_spaces = "a/b""#, Path::new("/")).is_err());
+    }
+
+    #[test]
+    fn directory_spaces_from_config_and_cli() {
+        let config = parse_config(r#"change_directory_spaces = "_""#);
+        let settings = Settings::combine(args(&["s", "t"]).unwrap(), config, None).unwrap();
+        assert_eq!(settings.flags.change_directory_spaces.as_deref(), Some("_"));
+        let settings = Settings::combine(
+            args(&["s", "t", "--change-directory-spaces", "-"]).unwrap(),
+            parse_config(r#"change_directory_spaces = "_""#),
+            None,
+        )
+        .unwrap();
+        assert_eq!(settings.flags.change_directory_spaces.as_deref(), Some("-"));
+        for invalid in ["a/b", "a\\b"] {
+            assert!(args(&["s", "t", "--change-directory-spaces", invalid]).is_err());
+        }
+        assert!(ConfigFile::parse(r#"change_directory_spaces = "a/b""#, Path::new("/")).is_err());
     }
 
     #[test]

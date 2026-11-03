@@ -27,6 +27,10 @@ mod tests;
 mod utils;
 mod xml_processor;
 
+/// Build identifier embedded from version_timestamp.txt at compilation time.
+pub const VERSION_TIMESTAMP: &str = env!("VERSION_TIMESTAMP");
+pub const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), " ", env!("VERSION_TIMESTAMP"));
+
 #[derive(Debug, Default)]
 pub struct Skeleton {
     pub content: String,
@@ -92,7 +96,15 @@ fn main() -> Result<()> {
     // Commit only after all files are written: in domain mode, several databases share
     // the same repository
     if settings.git {
-        git::commit_output(&git::repositories(&out_dir, &flags.output_tree, &db_names));
+        let output_names: Vec<_> = db_names
+            .iter()
+            .map(|name| utils::directory_name_with_replaced_spaces(name, &flags))
+            .collect();
+        git::commit_output(&git::repositories(
+            &out_dir,
+            &flags.output_tree,
+            &output_names,
+        ));
     }
 
     let duration = start.elapsed();

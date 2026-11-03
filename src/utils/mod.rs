@@ -349,6 +349,7 @@ mod tests {
 
     fn lossless() -> Flags {
         Flags {
+            change_directory_spaces: None,
             change_filename_spaces: None,
             remove_ddrrefs: false,
             parse_all_lines: false,
@@ -406,24 +407,58 @@ mod tests {
 
 /// Replace spaces and collapse runs of replacement characters in the output filename.
 pub(crate) fn filename_with_replaced_spaces(output_file_path: &Path, flags: &Flags) -> PathBuf {
-    static SPACES: LazyLock<Regex> = LazyLock::new(|| Regex::new(" +").unwrap());
     let mut path = output_file_path.to_path_buf();
     if let Some(replacement) = &flags.change_filename_spaces
         && let Some(name) = path.file_name().and_then(|name| name.to_str())
     {
-        let normalized = SPACES.replace_all(name, " ");
-        let name = normalized.replace(' ', replacement);
-        let mut collapsed = String::with_capacity(name.len());
-        let mut previous = None;
-        for character in name.chars() {
-            if previous != Some(character) || !replacement.contains(character) {
-                collapsed.push(character);
-            }
-            previous = Some(character);
-        }
-        path.set_file_name(collapsed);
+        path.set_file_name(replace_name_spaces(name, replacement));
     }
     path
+}
+
+/// Shared replacement rules for filenames and generated directory components.
+fn replace_name_spaces(name: &str, replacement: &str) -> String {
+    static SPACES: LazyLock<Regex> = LazyLock::new(|| Regex::new(" +").unwrap());
+    let normalized = SPACES.replace_all(name, " ");
+    let name = normalized.replace(' ', replacement);
+    let mut collapsed = String::with_capacity(name.len());
+    let mut previous = None;
+    for character in name.chars() {
+        if previous != Some(character) || !replacement.contains(character) {
+            collapsed.push(character);
+        }
+        previous = Some(character);
+    }
+    collapsed
+}
+
+pub(crate) fn directory_name_with_replaced_spaces(name: &str, flags: &Flags) -> String {
+    let Some(replacement) = &flags.change_directory_spaces else {
+        return name.to_owned();
+    };
+    let replaced = replace_name_spaces(name, replacement);
+    // A generated name must remain a directory component.
+    if matches!(replaced.as_str(), "" | "." | "..") {
+        name.to_owned()
+    } else {
+        replaced
+    }
+}
+
+/// Normalize only generated directories below `root`, preserving the supplied target path.
+pub(crate) fn directories_with_replaced_spaces(root: &Path, path: &Path, flags: &Flags) -> PathBuf {
+    let relative = path
+        .strip_prefix(root)
+        .expect("Generated path must be below its output root");
+    let mut result = root.to_path_buf();
+    for component in relative.components() {
+        let name = component.as_os_str();
+        match name.to_str() {
+            Some(name) => result.push(directory_name_with_replaced_spaces(name, flags)),
+            None => result.push(name),
+        }
+    }
+    result
 }
 
 #[cfg(test)]
@@ -432,12 +467,40 @@ mod filename_space_tests {
     use crate::config::OutputTree;
 
     #[test]
+    fn directory_spaces_preserve_target_and_filename() {
+        let mut flags = Flags {
+            change_directory_spaces: Some("--".to_owned()),
+            change_filename_spaces: None,
+            remove_ddrrefs: false,
+            parse_all_lines: false,
+            lossless: false,
+            output_tree: OutputTree::Db,
+            obfuscate_passwords: false,
+            script_extension: "txt".to_owned(),
+        };
+        let root = Path::new("target with spaces");
+        let directories = root.join("Folder  -- Name - ID 1/Nested   Folder - ID 2");
+        let result = directories_with_replaced_spaces(root, &directories, &flags);
+        assert_eq!(result, root.join("Folder-Name-ID-1/Nested-Folder-ID-2"));
+        let file = result.join("Script Name - ID 3.fmscript");
+        assert_eq!(filename_with_replaced_spaces(&file, &flags), file);
+        flags.change_directory_spaces = Some("$1".to_owned());
+        assert_eq!(directory_name_with_replaced_spaces("A  B", &flags), "A$1B");
+        flags.change_directory_spaces = None;
+        assert_eq!(
+            directories_with_replaced_spaces(root, &directories, &flags),
+            directories
+        );
+    }
+
+    #[test]
     fn filename_spaces_collapse_before_literal_replacement() {
         let mut flags = Flags {
             parse_all_lines: false,
             lossless: false,
             output_tree: OutputTree::Db,
             obfuscate_passwords: false,
+            change_directory_spaces: None,
             change_filename_spaces: Some("-".to_owned()),
             remove_ddrrefs: false,
             script_extension: ".txt".to_owned(),

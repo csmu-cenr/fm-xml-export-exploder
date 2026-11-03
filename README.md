@@ -38,12 +38,19 @@ Exports split into one file per catalog (FileMaker 2026) work as well: put the s
 | `--git` | Commit the output with git, see below |
 | `--obfuscate-passwords` | Replace passwords in readable scripts with `••••••••` |
 | `--change-filename-spaces <text>` | Replace spaces in output filenames and collapse repeated replacement characters; directory names stay unchanged. Use `--change-filename-spaces=-` for hyphens. |
+| `--change-directory-spaces <text>` | Replace spaces in generated directory names (including database folders), using the same collapse rules as filenames. The supplied target directory stays unchanged. Use both space-replacement flags with `-` for paths without spaces inside the output. |
 | `--remove-ddrrefs` | Remove DDRREF elements without leaving empty lines. This also removes them from lossless output, so reassembly no longer reproduces those references. |
 | `--script-extension <ext>` | File extension of the readable scripts in `scripts_sanitized` (default `txt`), e.g. `fmscript` for syntax highlighting in your editor |
 | `-a`, `--all-lines` | Keep lines that are skipped by default to reduce noise |
 | `-l`, `--lossless` | Keep all information of the XML, including less important catalogs and attributes, so the export can be [reassembled](#reassembling-an-export) |
 
 ### Config file
+
+`fm-xml-export-exploder --version` prints the package version followed by the build
+identifier from `version_timestamp.txt`. Update that file with a UTC timestamp
+(for example, `2026-11-03T01:26:13Z`) before compiling a new build. Cargo embeds its
+contents in the binary and rebuilds when the file changes; the deployed binary does
+not need the file alongside it.
 
 Instead of passing options every time, put them into a `fm-xml-export-exploder.toml`. It is used automatically when it is in the current directory, or explicitly with `--config <file>`. Then `fm-xml-export-exploder` runs without arguments:
 
@@ -54,6 +61,7 @@ output_tree = "domain"   # "db" or "domain"
 git = true
 script_extension = "txt"
 # change_filename_spaces = "-"
+# change_directory_spaces = "-"
 remove_ddrrefs = false
 obfuscate_passwords = true
 all_lines = false

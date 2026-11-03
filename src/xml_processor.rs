@@ -112,7 +112,12 @@ pub fn remove_stale_output(
     db_name: &str,
     output: &OutputFiles,
 ) -> Result<()> {
-    for root in output_roots(root_out_dir, &flags.output_tree, db_name) {
+    let output_name = crate::utils::directory_name_with_replaced_spaces(db_name, flags);
+    let mut roots = output_roots(root_out_dir, &flags.output_tree, &output_name);
+    if output_name != db_name {
+        roots.extend(output_roots(root_out_dir, &flags.output_tree, db_name));
+    }
+    for root in roots {
         output.remove_stale(&root)?;
     }
     Ok(())

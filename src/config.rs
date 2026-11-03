@@ -246,6 +246,7 @@ pub enum OutputTree {
 }
 
 pub struct Flags {
+    pub change_directory_spaces: Option<String>,
     pub change_filename_spaces: Option<String>,
     pub remove_ddrrefs: bool,
     pub parse_all_lines: bool,

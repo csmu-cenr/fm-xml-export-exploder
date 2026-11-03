@@ -149,22 +149,18 @@ pub fn xml_explode_catalog<R: Read + BufRead>(
                     uses_folders,
                     &current_path,
                 );
-                let dir = match subfolder {
-                    Some(subfolder) => {
-                        create_dir(&subfolder);
-                        subfolder
-                    }
-                    None => out_dir_path_base.clone(),
-                };
-                let path = crate::utils::filename_with_replaced_spaces(
-                    &dir.join(file_name),
+                let dir = subfolder.unwrap_or_else(|| out_dir_path_base.clone());
+                let raw_path = dir.join(file_name);
+                let parent = crate::utils::directories_with_replaced_spaces(
+                    &out_dir_path_base,
+                    raw_path.parent().unwrap(),
                     context.flags,
                 );
-                if let Some(parent) = path.parent()
-                    && parent != dir
-                {
-                    create_dir(parent);
-                }
+                let path = crate::utils::filename_with_replaced_spaces(
+                    &parent.join(raw_path.file_name().unwrap()),
+                    context.flags,
+                );
+                create_dir(&parent);
                 context.output.write(&path, &content);
                 if let Some(on_written) = on_written {
                     on_written(&path, &content);
