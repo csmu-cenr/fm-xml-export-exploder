@@ -17,6 +17,64 @@ mod tests {
     use crate::xml_processor::{explode_file, explode_xml};
 
     #[test]
+    fn modified_fields_with_nested_table_references_do_not_collide() {
+        let root =
+            std::env::temp_dir().join(format!("fm-nested-table-reference-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(&root).unwrap();
+        let input = root.join("input.xml");
+        let mut xml = String::from(
+            "<FMSaveAsXML version=\"2.3.0.0\" File=\"T.fmp12\"><Structure><ModifyAction><FieldsForTables>",
+        );
+        for (id, table, value) in [
+            (213, "TABLE_TEMPLATE", "Get ( foundCount )"),
+            (214, "OTHER_TABLE", "42"),
+        ] {
+            xml.push_str(&format!(
+                r#"<FieldCatalog>
+    <ObjectList membercount="1">
+        <Field>
+            <FieldReference id="6" name="found_count" repetition="1">
+                <Calculation><Text><![CDATA[{value}]]></Text></Calculation>
+                <BaseTableReference id="{id}" name="{table}"></BaseTableReference>
+            </FieldReference>
+        </Field>
+    </ObjectList>
+</FieldCatalog>"#
+            ));
+        }
+        xml.push_str("</FieldsForTables></ModifyAction></Structure></FMSaveAsXML>");
+        fs::write(&input, xml).unwrap();
+        for (tree, name) in [(OutputTree::Db, "db"), (OutputTree::Domain, "domain")] {
+            let output = root.join(name);
+            let flags = Flags {
+                change_filename_spaces: Some("-".to_string()),
+                remove_ddrrefs: true,
+                parse_all_lines: false,
+                lossless: false,
+                output_tree: tree,
+                obfuscate_passwords: false,
+                script_extension: "txt".to_string(),
+            };
+            explode_xml(&input, &output, &flags).unwrap();
+            let domain = match flags.output_tree {
+                OutputTree::Db => output.join("T/tables__modify_action"),
+                OutputTree::Domain => output.join("tables__modify_action/T"),
+            };
+            for (table, id, value) in [
+                ("TABLE_TEMPLATE", 213, "Get ( foundCount )"),
+                ("OTHER_TABLE", 214, "42"),
+            ] {
+                let path = domain.join(format!("{table} - ID {id}/found_count-ID-6.xml"));
+                let content = fs::read_to_string(path).unwrap();
+                assert!(content.contains(value));
+            }
+            assert!(!domain.join("found_count-ID-6.xml").exists());
+        }
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
     fn custom_options_preserve_upstream_output_and_reassembly() {
         let root = std::env::temp_dir().join(format!("fm-custom-options-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);

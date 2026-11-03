@@ -60,11 +60,28 @@ pub fn derived_file_name(xml: &str, path_stack: &[String], tag_name: &str) -> Op
                 "FieldCatalog/BaseTableReference/@id",
                 "FieldCatalog/ObjectList/Field/FieldReference/@name",
                 "FieldCatalog/ObjectList/Field/FieldReference/@id",
+                "FieldCatalog/ObjectList/Field/FieldReference/BaseTableReference/@name",
+                "FieldCatalog/ObjectList/Field/FieldReference/BaseTableReference/@id",
             ],
         )
         .ok()?;
-        let [Some(table), Some(table_id), Some(field), Some(field_id)] = results.as_slice() else {
+        let [
+            table,
+            table_id,
+            Some(field),
+            Some(field_id),
+            nested_table,
+            nested_table_id,
+        ] = results.as_slice()
+        else {
             return None;
+        };
+        let (table, table_id) = match (table, table_id) {
+            (Some(name), Some(id)) => (name, id),
+            _ => match (nested_table, nested_table_id) {
+                (Some(name), Some(id)) => (name, id),
+                _ => return None,
+            },
         };
         return Some(format!(
             "{}/{}.xml",
