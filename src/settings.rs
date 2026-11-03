@@ -66,6 +66,10 @@ pub struct Args {
     #[arg(long, allow_hyphen_values = true, value_parser = parse_filename_replacement)]
     change_directory_spaces: Option<String>,
 
+    /// Set both filename and directory space replacements; individual CLI options override this
+    #[arg(long, allow_hyphen_values = true, value_parser = parse_filename_replacement)]
+    change_path_spaces: Option<String>,
+
     /// Remove DDRREF elements and their otherwise empty lines (also in lossless mode)
     #[arg(long)]
     remove_ddrrefs: bool,
@@ -102,6 +106,7 @@ pub struct ConfigFile {
     change_directory_spaces: Option<String>,
     change_filename_spaces: Option<String>,
     remove_ddrrefs: Option<bool>,
+    change_path_spaces: Option<String>,
 }
 
 impl ConfigFile {
@@ -122,6 +127,11 @@ impl ConfigFile {
             .map_err(anyhow::Error::msg)?;
         config.change_directory_spaces = config
             .change_directory_spaces
+            .map(|value| parse_filename_replacement(&value))
+            .transpose()
+            .map_err(anyhow::Error::msg)?;
+        config.change_path_spaces = config
+            .change_path_spaces
             .map(|value| parse_filename_replacement(&value))
             .transpose()
             .map_err(anyhow::Error::msg)?;
@@ -183,10 +193,14 @@ impl Settings {
             flags: Flags {
                 change_directory_spaces: args
                     .change_directory_spaces
-                    .or(config.change_directory_spaces),
+                    .or_else(|| args.change_path_spaces.clone())
+                    .or(config.change_directory_spaces)
+                    .or_else(|| config.change_path_spaces.clone()),
                 change_filename_spaces: args
                     .change_filename_spaces
-                    .or(config.change_filename_spaces),
+                    .or(args.change_path_spaces)
+                    .or(config.change_filename_spaces)
+                    .or(config.change_path_spaces),
                 remove_ddrrefs: switch(args.remove_ddrrefs, config.remove_ddrrefs),
                 parse_all_lines: switch(args.all_lines, config.all_lines),
                 lossless: switch(args.lossless, config.lossless),
@@ -334,6 +348,52 @@ remove_ddrrefs = true"#,
             assert!(args(&["s", "t", "--change-directory-spaces", invalid]).is_err());
         }
         assert!(ConfigFile::parse(r#"change_directory_spaces = "a/b""#, Path::new("/")).is_err());
+    }
+
+    #[test]
+    fn path_spaces_sets_both_options_with_cli_precedence() {
+        let resolve = |cli: &[&str], config| {
+            Settings::combine(args(cli).unwrap(), parse_config(config), None)
+                .unwrap()
+                .flags
+        };
+        let flags = resolve(&["s", "t", "--change-path-spaces", "-"], "");
+        assert_eq!(flags.change_filename_spaces.as_deref(), Some("-"));
+        assert_eq!(flags.change_directory_spaces.as_deref(), Some("-"));
+        let flags = resolve(&["s", "t"], r#"change_path_spaces = "_""#);
+        assert_eq!(flags.change_filename_spaces.as_deref(), Some("_"));
+        assert_eq!(flags.change_directory_spaces.as_deref(), Some("_"));
+        for cli in [
+            vec![
+                "s",
+                "t",
+                "--change-path-spaces",
+                "-",
+                "--change-filename-spaces",
+                "_",
+            ],
+            vec![
+                "s",
+                "t",
+                "--change-filename-spaces",
+                "_",
+                "--change-path-spaces",
+                "-",
+            ],
+        ] {
+            let flags = resolve(&cli, r#"change_directory_spaces = "config""#);
+            assert_eq!(flags.change_filename_spaces.as_deref(), Some("_"));
+            assert_eq!(flags.change_directory_spaces.as_deref(), Some("-"));
+        }
+        let flags = resolve(
+            &["s", "t", "--change-directory-spaces", ""],
+            r#"change_path_spaces = "-"
+change_filename_spaces = "_""#,
+        );
+        assert_eq!(flags.change_filename_spaces.as_deref(), Some("_"));
+        assert_eq!(flags.change_directory_spaces.as_deref(), Some(""));
+        assert!(args(&["s", "t", "--change-path-spaces", "a/b"]).is_err());
+        assert!(ConfigFile::parse(r#"change_path_spaces = "a/b""#, Path::new("/")).is_err());
     }
 
     #[test]

@@ -38,6 +38,7 @@ Exports split into one file per catalog (FileMaker 2026) work as well: put the s
 | `--git` | Commit the output with git, see below |
 | `--obfuscate-passwords` | Replace passwords in readable scripts with `••••••••` |
 | `--change-filename-spaces <text>` | Replace spaces in output filenames and collapse repeated replacement characters; directory names stay unchanged. Use `--change-filename-spaces=-` for hyphens. |
+| `--change-path-spaces <text>` | Shorthand for setting both filename and directory space replacements. Individual CLI options override it; CLI values override config values. |
 | `--change-directory-spaces <text>` | Replace spaces in generated directory names (including database folders), using the same collapse rules as filenames. The supplied target directory stays unchanged. Use both space-replacement flags with `-` for paths without spaces inside the output. |
 | `--remove-ddrrefs` | Remove DDRREF elements without leaving empty lines. This also removes them from lossless output, so reassembly no longer reproduces those references. |
 | `--script-extension <ext>` | File extension of the readable scripts in `scripts_sanitized` (default `txt`), e.g. `fmscript` for syntax highlighting in your editor |
@@ -60,6 +61,7 @@ target = "./repos"       # folder for the output
 output_tree = "domain"   # "db" or "domain"
 git = true
 script_extension = "txt"
+# change_path_spaces = "-" # sets both; individual config options override this
 # change_filename_spaces = "-"
 # change_directory_spaces = "-"
 remove_ddrrefs = false
